@@ -8,26 +8,26 @@ import array
 import math
 import ctypes
 import pyzed.sl as sl
+
 M_PI = 3.1415926
 
 
-ID_COLORS = [(232, 176,59)
-            ,(175, 208,25)
-            ,(102, 205,105)
-            ,(185, 0,255)
-            ,(99, 107,252)]
+ID_COLORS = [(232, 176, 59), (175, 208, 25), (102, 205, 105), (185, 0, 255), (99, 107, 252)]
+
 
 def render_object(object_data, is_tracking_on):
     if is_tracking_on:
-        return (object_data.tracking_state == sl.OBJECT_TRACKING_STATE.OK)
+        return object_data.tracking_state == sl.OBJECT_TRACKING_STATE.OK
     else:
-        return ((object_data.tracking_state == sl.OBJECT_TRACKING_STATE.OK) or (object_data.tracking_state == sl.OBJECT_TRACKING_STATE.OFF))
-        
+        return (object_data.tracking_state == sl.OBJECT_TRACKING_STATE.OK) or (
+            object_data.tracking_state == sl.OBJECT_TRACKING_STATE.OFF
+        )
+
 
 def generate_color_id_u(idx):
     arr = []
-    if(idx < 0):
-        arr = [236,184,36,255]
+    if idx < 0:
+        arr = [236, 184, 36, 255]
     else:
         color_idx = idx % 5
         arr = [ID_COLORS[color_idx][0], ID_COLORS[color_idx][1], ID_COLORS[color_idx][2], 255]
@@ -86,10 +86,12 @@ void main() {
 }
 """
 
+
 def generate_color_id(_idx):
-    clr = np.divide(generate_color_id_u(_idx),255.0)
+    clr = np.divide(generate_color_id_u(_idx), 255.0)
     clr[0], clr[2] = clr[2], clr[0]
     return clr
+
 
 class Shader:
     def __init__(self, _vs, _fs):
@@ -99,8 +101,8 @@ class Shader:
 
         glAttachShader(self.program_id, vertex_id)
         glAttachShader(self.program_id, fragment_id)
-        glBindAttribLocation( self.program_id, 0, "in_vertex")
-        glBindAttribLocation( self.program_id, 1, "in_texCoord")
+        glBindAttribLocation(self.program_id, 0, "in_vertex")
+        glBindAttribLocation(self.program_id, 1, "in_texCoord")
         glLinkProgram(self.program_id)
 
         if glGetProgramiv(self.program_id, GL_LINK_STATUS) != GL_TRUE:
@@ -111,7 +113,7 @@ class Shader:
                 glDeleteShader(vertex_id)
             if (fragment_id is not None) and (fragment_id > 0) and glIsShader(fragment_id):
                 glDeleteShader(fragment_id)
-            raise RuntimeError('Error linking program: %s' % (info))
+            raise RuntimeError("Error linking program: %s" % (info))
         if (vertex_id is not None) and (vertex_id > 0) and glIsShader(vertex_id):
             glDeleteShader(vertex_id)
         if (fragment_id is not None) and (fragment_id > 0) and glIsShader(fragment_id):
@@ -130,7 +132,7 @@ class Shader:
                 info = glGetShaderInfoLog(shader_id)
                 if (shader_id is not None) and (shader_id > 0) and glIsShader(shader_id):
                     glDeleteShader(shader_id)
-                raise RuntimeError('Shader compilation failed: %s' % (info))
+                raise RuntimeError("Shader compilation failed: %s" % (info))
             return shader_id
         except:
             if (shader_id is not None) and (shader_id > 0) and glIsShader(shader_id):
@@ -140,10 +142,12 @@ class Shader:
     def get_program_id(self):
         return self.program_id
 
+
 class Simple3DObject:
     """
     Class that manages simple 3D objects to render with OpenGL
     """
+
     def __init__(self, _isStatic):
         self.vaoID = 0
         self.drawing_type = GL_TRIANGLES
@@ -151,9 +155,9 @@ class Simple3DObject:
         self.isStatic = _isStatic
         self.is_init = False
 
-        self.vertices = array.array('f')
-        self.normals = array.array('f')
-        self.indices = array.array('I')
+        self.vertices = array.array("f")
+        self.normals = array.array("f")
+        self.indices = array.array("I")
 
     def __del__(self):
         self.is_init = False
@@ -172,13 +176,15 @@ class Simple3DObject:
     """
     Add a unique point to the list of points
     """
-    def add_pt(self, _pts):  
+
+    def add_pt(self, _pts):
         for pt in _pts:
             self.vertices.append(pt)
 
     """
     Add a unique normal to the list of normals
     """
+
     def add_normal(self, _normals):
         for normal in _normals:
             self.normals.append(normal)
@@ -186,23 +192,25 @@ class Simple3DObject:
     """
     Add a set of points to the list of points and their corresponding color
     """
+
     def add_points(self, _pts):
         for i in range(len(_pts)):
             pt = _pts[i]
             self.add_pt(pt)
-            current_size_index = int((len(self.vertices)/3))-1
+            current_size_index = int((len(self.vertices) / 3)) - 1
             self.indices.append(current_size_index)
-            self.indices.append(current_size_index+1)
+            self.indices.append(current_size_index + 1)
 
     """
     Add a point and its corresponding color to the list of points
     """
+
     def add_point_clr(self, _pt):
         self.add_pt(_pt)
-        self.add_normal([0.3,0.3,0.3])
+        self.add_normal([0.3, 0.3, 0.3])
         self.indices.append(len(self.indices))
 
-    def add_point_clr_norm(self, _pt,  _norm):
+    def add_point_clr_norm(self, _pt, _norm):
         self.add_pt(_pt)
         self.add_normal(_norm)
         self.indices.append(len(self.indices))
@@ -210,16 +218,17 @@ class Simple3DObject:
     """
     Define a line from two points
     """
+
     def add_line(self, _p1, _p2):
         self.add_point_clr(_p1)
         self.add_point_clr(_p2)
-    
-    def add_sphere(self): 
+
+    def add_sphere(self):
         m_radius = 0.025
         m_stack_count = 12
         m_sector_count = 12
 
-        for i in range(m_stack_count+1):
+        for i in range(m_stack_count + 1):
             lat0 = M_PI * (-0.5 + (i - 1) / m_stack_count)
             z0 = math.sin(lat0)
             zr0 = math.cos(lat0)
@@ -244,64 +253,80 @@ class Simple3DObject:
                 x = math.cos(lng)
                 y = math.sin(lng)
 
-                v= [m_radius * x * zr1, m_radius * y * zr1, m_radius * z1]
+                v = [m_radius * x * zr1, m_radius * y * zr1, m_radius * z1]
                 normal = [x * zr1, y * zr1, z1]
                 self.add_point_clr_norm(v, normal)
 
                 v = [m_radius * x * zr0, m_radius * y * zr0, m_radius * z0]
-                normal = [x * zr0, y * zr0, z0]                
+                normal = [x * zr0, y * zr0, z0]
                 self.add_point_clr_norm(v, normal)
 
     def push_to_GPU(self):
-        if( self.is_init == False):
+        if self.is_init == False:
             self.vboID = glGenBuffers(3)
             self.is_init = True
-        
+
         draw_type = GL_DYNAMIC_DRAW
         if self.isStatic:
             draw_type = GL_STATIC_DRAW
 
         if len(self.vertices):
             glBindBuffer(GL_ARRAY_BUFFER, self.vboID[0])
-            glBufferData(GL_ARRAY_BUFFER, len(self.vertices) * self.vertices.itemsize, (GLfloat * len(self.vertices))(*self.vertices), draw_type)         
-        
+            glBufferData(
+                GL_ARRAY_BUFFER,
+                len(self.vertices) * self.vertices.itemsize,
+                (GLfloat * len(self.vertices))(*self.vertices),
+                draw_type,
+            )
+
         if len(self.normals):
             glBindBuffer(GL_ARRAY_BUFFER, self.vboID[1])
-            glBufferData(GL_ARRAY_BUFFER, len(self.normals) * self.normals.itemsize, (GLfloat * len(self.normals))(*self.normals), draw_type)
+            glBufferData(
+                GL_ARRAY_BUFFER,
+                len(self.normals) * self.normals.itemsize,
+                (GLfloat * len(self.normals))(*self.normals),
+                draw_type,
+            )
 
         if len(self.indices):
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.vboID[2])
-            glBufferData(GL_ELEMENT_ARRAY_BUFFER,len(self.indices) * self.indices.itemsize,(GLuint * len(self.indices))(*self.indices), draw_type)
-            
+            glBufferData(
+                GL_ELEMENT_ARRAY_BUFFER,
+                len(self.indices) * self.indices.itemsize,
+                (GLuint * len(self.indices))(*self.indices),
+                draw_type,
+            )
+
         self.elementbufferSize = len(self.indices)
 
-    def clear(self):        
-        self.vertices = array.array('f')
-        self.normals = array.array('f')
-        self.indices = array.array('I')
+    def clear(self):
+        self.vertices = array.array("f")
+        self.normals = array.array("f")
+        self.indices = array.array("I")
 
     def set_drawing_type(self, _type):
         self.drawing_type = _type
 
     def draw(self):
-        if (self.elementbufferSize > 0) and self.is_init:            
+        if (self.elementbufferSize > 0) and self.is_init:
             glEnableVertexAttribArray(0)
             glBindBuffer(GL_ARRAY_BUFFER, self.vboID[0])
-            glVertexAttribPointer(0,3,GL_FLOAT,GL_FALSE,0,None)
-            
+            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, None)
+
             glEnableVertexAttribArray(1)
             glBindBuffer(GL_ARRAY_BUFFER, self.vboID[1])
-            glVertexAttribPointer(1,3,GL_FLOAT,GL_FALSE,0,None)
+            glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, None)
 
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.vboID[2])
-            glDrawElements(self.drawing_type, self.elementbufferSize, GL_UNSIGNED_INT, None)      
-            
+            glDrawElements(self.drawing_type, self.elementbufferSize, GL_UNSIGNED_INT, None)
+
             glDisableVertexAttribArray(0)
             glDisableVertexAttribArray(1)
 
+
 class Skeleton:
     def __init__(self):
-        self.clr = [0,0,0,1]
+        self.clr = [0, 0, 0, 1]
         self.kps = []
         self.joints = Simple3DObject(False)
         self.Z = 1
@@ -312,8 +337,8 @@ class Skeleton:
             kp_2 = obj.keypoint[bone[1].value]
             if math.isfinite(kp_1[0]) and math.isfinite(kp_2[0]):
                 self.joints.add_line(kp_1, kp_2)
-    
-        for part in range(len(BODY_PARTS)-1):    # -1 to avoid LAST
+
+        for part in range(len(BODY_PARTS) - 1):  # -1 to avoid LAST
             kp = obj.keypoint[part]
             norm = np.linalg.norm(kp)
             if math.isfinite(norm):
@@ -325,27 +350,28 @@ class Skeleton:
         self.Z = abs(obj.position[2])
         # Draw skeletons
         kpt_size = obj.keypoint.size
-        
-        if kpt_size == 18*3:
+
+        if kpt_size == 18 * 3:
             self.createSk(obj, sl.BODY_18_PARTS, sl.BODY_18_BONES)
-        elif kpt_size == 34*3:
+        elif kpt_size == 34 * 3:
             self.createSk(obj, sl.BODY_34_PARTS, sl.BODY_34_BONES)
-        elif kpt_size == 38*3:
+        elif kpt_size == 38 * 3:
             self.createSk(obj, sl.BODY_38_PARTS, sl.BODY_38_BONES)
-    
+
     def push_to_GPU(self):
         self.joints.push_to_GPU()
 
     def draw(self, shader_sk_clr):
-        glUniform4f(shader_sk_clr, self.clr[0],self.clr[1],self.clr[2],self.clr[3])
-        glLineWidth((20. / self.Z))
+        glUniform4f(shader_sk_clr, self.clr[0], self.clr[1], self.clr[2], self.clr[3])
+        glLineWidth((20.0 / self.Z))
         self.joints.draw()
 
     def drawKPS(self, shader_clr, sphere, shader_pt):
-        glUniform4f(shader_clr, self.clr[0],self.clr[1],self.clr[2],self.clr[3])         
+        glUniform4f(shader_clr, self.clr[0], self.clr[1], self.clr[2], self.clr[3])
         for k in self.kps:
-            glUniform4f(shader_pt, k[0],k[1],k[2], 1)
+            glUniform4f(shader_pt, k[0], k[1], k[2], 1)
             sphere.draw()
+
 
 IMAGE_FRAGMENT_SHADER = """
 # version 330 core
@@ -370,10 +396,12 @@ void main() {
 }
 """
 
+
 class ImageHandler:
     """
     Class that manages the image stream to render with OpenGL
     """
+
     def __init__(self):
         self.tex_id = 0
         self.image_tex = 0
@@ -384,21 +412,15 @@ class ImageHandler:
         if self.image_tex:
             self.image_tex = 0
 
-    def initialize(self, _res):    
+    def initialize(self, _res):
         self.shader_image = Shader(IMAGE_VERTEX_SHADER, IMAGE_FRAGMENT_SHADER)
-        self.tex_id = glGetUniformLocation( self.shader_image.get_program_id(), "texImage")
+        self.tex_id = glGetUniformLocation(self.shader_image.get_program_id(), "texImage")
 
-        g_quad_vertex_buffer_data = np.array([-1, -1, 0,
-                                                1, -1, 0,
-                                                -1, 1, 0,
-                                                -1, 1, 0,
-                                                1, -1, 0,
-                                                1, 1, 0], np.float32)
+        g_quad_vertex_buffer_data = np.array([-1, -1, 0, 1, -1, 0, -1, 1, 0, -1, 1, 0, 1, -1, 0, 1, 1, 0], np.float32)
 
         self.quad_vb = glGenBuffers(1)
         glBindBuffer(GL_ARRAY_BUFFER, self.quad_vb)
-        glBufferData(GL_ARRAY_BUFFER, g_quad_vertex_buffer_data.nbytes,
-                     g_quad_vertex_buffer_data, GL_STATIC_DRAW)
+        glBufferData(GL_ARRAY_BUFFER, g_quad_vertex_buffer_data.nbytes, g_quad_vertex_buffer_data, GL_STATIC_DRAW)
         glBindBuffer(GL_ARRAY_BUFFER, 0)
 
         # Create and populate the texture
@@ -406,25 +428,35 @@ class ImageHandler:
 
         # Generate a texture name
         self.image_tex = glGenTextures(1)
-        
+
         # Select the created texture
         glBindTexture(GL_TEXTURE_2D, self.image_tex)
-        
+
         # Set the texture minification and magnification filters
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-        
+
         # Fill the texture with an image
         # None means reserve texture memory, but texels are undefined
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, _res.width, _res.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, None)
-        
+
         # Unbind the texture
-        glBindTexture(GL_TEXTURE_2D, 0)   
+        glBindTexture(GL_TEXTURE_2D, 0)
 
     def push_new_image(self, _zed_mat):
         glBindTexture(GL_TEXTURE_2D, self.image_tex)
-        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, _zed_mat.get_width(), _zed_mat.get_height(), GL_RGBA, GL_UNSIGNED_BYTE,  ctypes.c_void_p(_zed_mat.get_pointer()))
-        glBindTexture(GL_TEXTURE_2D, 0)            
+        glTexSubImage2D(
+            GL_TEXTURE_2D,
+            0,
+            0,
+            0,
+            _zed_mat.get_width(),
+            _zed_mat.get_height(),
+            GL_RGBA,
+            GL_UNSIGNED_BYTE,
+            ctypes.c_void_p(_zed_mat.get_pointer()),
+        )
+        glBindTexture(GL_TEXTURE_2D, 0)
 
     def draw(self):
         glUseProgram(self.shader_image.get_program_id())
@@ -437,30 +469,34 @@ class ImageHandler:
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, ctypes.c_void_p(0))
         glDrawArrays(GL_TRIANGLES, 0, 6)
         glDisableVertexAttribArray(0)
-        glBindTexture(GL_TEXTURE_2D, 0)            
+        glBindTexture(GL_TEXTURE_2D, 0)
         glUseProgram(0)
+
 
 class GLViewer:
     """
     Class that manages input events, window and OpenGL rendering pipeline
     """
+
     def __init__(self):
         self.available = False
         self.bodies = []
         self.mutex = Lock()
         # Create the rendering camera
-        self.projection = array.array('f')
+        self.projection = array.array("f")
         self.basic_sphere = Simple3DObject(True)
 
-    def init(self): 
+    def init(self):
         glutInit()
         wnd_w = glutGet(GLUT_SCREEN_WIDTH)
         wnd_h = glutGet(GLUT_SCREEN_HEIGHT)
-        width = (int)(wnd_w*0.9)
-        height = (int)(wnd_h*0.9)
-     
+        width = (int)(wnd_w * 0.9)
+        height = (int)(wnd_h * 0.9)
+
         glutInitWindowSize(width, height)
-        glutInitWindowPosition((int)(wnd_w*0.05), (int)(wnd_h*0.05)) # The window opens at the upper left corner of the screen
+        glutInitWindowPosition(
+            (int)(wnd_w * 0.05), (int)(wnd_h * 0.05)
+        )  # The window opens at the upper left corner of the screen
         glutInitDisplayMode(GLUT_DOUBLE | GLUT_SRGB)
         glutCreateWindow(b"ZED Fusion Body Tracking")
         glViewport(0, 0, width, height)
@@ -480,7 +516,7 @@ class GLViewer:
         self.shader_sk_image = Shader(SK_VERTEX_SHADER, SK_FRAGMENT_SHADER)
         self.shader_sk_MVP = glGetUniformLocation(self.shader_sk_image.get_program_id(), "u_mvpMatrix")
         self.shader_sk_clr = glGetUniformLocation(self.shader_sk_image.get_program_id(), "u_color")
-        
+
         self.shader_sphere_image = Shader(SK_SPHERE_SHADER, SK_FRAGMENT_SHADER)
         self.shader_sphere_MVP = glGetUniformLocation(self.shader_sphere_image.get_program_id(), "u_mvpMatrix")
         self.shader_sphere_clr = glGetUniformLocation(self.shader_sphere_image.get_program_id(), "u_color")
@@ -490,14 +526,14 @@ class GLViewer:
 
         self.floor_plane_set = False
 
-        self.basic_sphere.add_sphere()        
+        self.basic_sphere.add_sphere()
         self.basic_sphere.set_drawing_type(GL_QUADS)
         self.basic_sphere.push_to_GPU()
 
         # Register the drawing function with GLUT
         glutDisplayFunc(self.draw_callback)
         # Register the function called when nothing happens
-        glutIdleFunc(self.idle)   
+        glutIdleFunc(self.idle)
 
         glutKeyboardFunc(self.keyPressedCallback)
         # Register the closing function
@@ -517,37 +553,36 @@ class GLViewer:
         im_w = 1280
         im_h = 720
 
-        self.projection.append( 1 / math.tan(fov_x * 0.5) )  # Horizontal FoV.
-        self.projection.append( 0)
+        self.projection.append(1 / math.tan(fov_x * 0.5))  # Horizontal FoV.
+        self.projection.append(0)
         # Horizontal offset.
-        self.projection.append( 2 * ((im_w * 0.5) / im_w) - 1)
-        self.projection.append( 0)
+        self.projection.append(2 * ((im_w * 0.5) / im_w) - 1)
+        self.projection.append(0)
 
-        self.projection.append( 0)
-        self.projection.append( 1 / math.tan(fov_y * 0.5))  # Vertical FoV.
+        self.projection.append(0)
+        self.projection.append(1 / math.tan(fov_y * 0.5))  # Vertical FoV.
         # Vertical offset.
         self.projection.append(-(2 * ((im_h * 0.5) / im_h) - 1))
-        self.projection.append( 0)
+        self.projection.append(0)
 
-        self.projection.append( 0)
-        self.projection.append( 0)
+        self.projection.append(0)
+        self.projection.append(0)
         # Near and far planes.
-        self.projection.append( -(_zfar + _znear) / (_zfar - _znear))
+        self.projection.append(-(_zfar + _znear) / (_zfar - _znear))
         # Near and far planes.
-        self.projection.append( -(2 * _zfar * _znear) / (_zfar - _znear))
+        self.projection.append(-(2 * _zfar * _znear) / (_zfar - _znear))
 
-        self.projection.append( 0)
-        self.projection.append( 0)
-        self.projection.append( -1)
-        self.projection.append( 0)
-        
+        self.projection.append(0)
+        self.projection.append(0)
+        self.projection.append(-1)
+        self.projection.append(0)
 
     def is_available(self):
         if self.available:
             glutMainLoopEvent()
         return self.available
 
-    def update_bodies(self, _bodies):       # _objs of type sl.Bodies
+    def update_bodies(self, _bodies):  # _objs of type sl.Bodies
         self.mutex.acquire()
 
         # Clear objects
@@ -564,17 +599,17 @@ class GLViewer:
         if self.available:
             glutPostRedisplay()
 
-    def exit(self):      
+    def exit(self):
         if self.available:
             self.available = False
 
-    def close_func(self): 
+    def close_func(self):
         if self.available:
-            self.available = False     
+            self.available = False
 
     def keyPressedCallback(self, key, x, y):
         if ord(key) == 113 or ord(key) == 27:
-            self.close_func() 
+            self.close_func()
 
     def draw_callback(self):
         if self.available:
@@ -583,7 +618,7 @@ class GLViewer:
             self.mutex.acquire()
             self.update()
             self.draw()
-            self.mutex.release()  
+            self.mutex.release()
 
             glutSwapBuffers()
             glutPostRedisplay()
@@ -594,15 +629,15 @@ class GLViewer:
 
     def draw(self):
         glUseProgram(self.shader_sk_image.get_program_id())
-        glUniformMatrix4fv(self.shader_sk_MVP, 1, GL_TRUE,  (GLfloat * len(self.projection))(*self.projection))
-        
+        glUniformMatrix4fv(self.shader_sk_MVP, 1, GL_TRUE, (GLfloat * len(self.projection))(*self.projection))
+
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
         for body in self.bodies:
             body.draw(self.shader_sphere_clr)
         glUseProgram(0)
 
         glUseProgram(self.shader_sphere_image.get_program_id())
-        glUniformMatrix4fv(self.shader_sphere_MVP, 1, GL_TRUE,  (GLfloat * len(self.projection))(*self.projection))
+        glUniformMatrix4fv(self.shader_sphere_MVP, 1, GL_TRUE, (GLfloat * len(self.projection))(*self.projection))
         for body in self.bodies:
             body.drawKPS(self.shader_sphere_clr, self.basic_sphere, self.shader_sphere_pt)
         glUseProgram(0)

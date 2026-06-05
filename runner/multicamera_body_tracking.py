@@ -19,14 +19,15 @@
 ########################################################################
 
 """
-   This sample shows how to detect a human bodies and draw their 
-   modelised skeleton in an OpenGL window
+This sample shows how to detect a human bodies and draw their
+modelised skeleton in an OpenGL window
 """
+
 import cv2
 import sys
 import pyzed.sl as sl
 import time
-import ogl_viewer.viewer as gl
+import habmoti.viewers.ogl_viewer.viewer as gl
 import numpy as np
 
 if __name__ == "__main__":
@@ -38,7 +39,9 @@ if __name__ == "__main__":
     #     exit(1)
 
     filepath = "./Ben.json"
-    fusion_configurations = sl.read_fusion_configuration_file(filepath, sl.COORDINATE_SYSTEM.RIGHT_HANDED_Y_UP, sl.UNIT.METER)
+    fusion_configurations = sl.read_fusion_configuration_file(
+        filepath, sl.COORDINATE_SYSTEM.RIGHT_HANDED_Y_UP, sl.UNIT.METER
+    )
     if len(fusion_configurations) <= 0:
         print("Invalid file.")
         exit(1)
@@ -100,13 +103,13 @@ if __name__ == "__main__":
             senders[conf.serial_number].start_publishing(communication_parameters)
 
         print("Camera", conf.serial_number, "is open")
-    
+
     if len(senders) + len(network_senders) < 1:
         print("No enough cameras")
         exit(1)
 
     print("Senders started, running the fusion...")
-        
+
     init_fusion_parameters = sl.InitFusionParameters()
     init_fusion_parameters.coordinate_system = sl.COORDINATE_SYSTEM.RIGHT_HANDED_Y_UP
     init_fusion_parameters.coordinate_units = sl.UNIT.METER
@@ -121,7 +124,7 @@ if __name__ == "__main__":
     print("Cameras in this configuration : ", len(fusion_configurations))
 
     # warmup
-    bodies = sl.Bodies()        
+    bodies = sl.Bodies()
     for serial in senders:
         zed = senders[serial]
         if zed.grab() <= sl.ERROR_CODE.SUCCESS:
@@ -147,7 +150,7 @@ if __name__ == "__main__":
     body_tracking_fusion_params = sl.BodyTrackingFusionParameters()
     body_tracking_fusion_params.enable_tracking = True
     body_tracking_fusion_params.enable_body_fitting = False
-    
+
     fusion.enable_body_tracking(body_tracking_fusion_params)
 
     rt = sl.BodyTrackingFusionRuntimeParameters()
@@ -159,22 +162,22 @@ if __name__ == "__main__":
     bodies = sl.Bodies()
     single_bodies = [sl.Bodies]
 
-    while (viewer.is_available()):
+    while viewer.is_available():
         for serial in senders:
             zed = senders[serial]
             if zed.grab() <= sl.ERROR_CODE.SUCCESS:
                 zed.retrieve_bodies(bodies)
 
         if fusion.process() == sl.FUSION_ERROR_CODE.SUCCESS:
-            
+
             # Retrieve detected objects
             fusion.retrieve_bodies(bodies, rt)
             # for debug, you can retrieve the data send by each camera, as well as communication and process stat just to make sure everything is okay
             # for cam in camera_identifiers:
-            #     fusion.retrieveBodies(single_bodies, rt, cam); 
+            #     fusion.retrieveBodies(single_bodies, rt, cam);
             viewer.update_bodies(bodies)
-            
+
     for sender in senders:
         senders[sender].close()
-        
+
     viewer.exit()
