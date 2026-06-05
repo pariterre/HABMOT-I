@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Any
 
 from .body_kinematics import BodyKinematics
 
@@ -11,7 +12,7 @@ class KinematicsDevice(ABC):
         """
 
     @abstractmethod
-    def get_raw_data(self):
+    def get_raw_data(self) -> Any:
         """
         Get the raw data from the device. The data are expected to be serializable
         """

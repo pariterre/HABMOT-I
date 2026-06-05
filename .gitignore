@@ -174,4 +174,5 @@ cython_debug/
 sandbox/
 
 # Produced files
+*.json
 *.obj

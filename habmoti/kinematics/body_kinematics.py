@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from enum import Enum, auto
 
+import numpy as np
+
 
 class JointCenter(Enum):
     LEFT_SHOULDER = auto()
@@ -13,4 +15,4 @@ class JointCenter(Enum):
 
 @dataclass(frozen=True)
 class BodyKinematics:
-    joint_centers: dict[JointCenter, tuple[float, float, float]]
+    joint_centers: dict[JointCenter, np.ndarray]

@@ -1,0 +1,22 @@
+{
+    // Utilisez IntelliSense pour en savoir plus sur les attributs possibles.
+    // Pointez pour afficher la description des attributs existants.
+    // Pour plus d'informations, visitez : https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Main",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/runner/main.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}",
+                "HABMOTI_CONFIG_PATH": "<PATH_TO_CONFIG_FILE>",
+                "HABMOTI_SAVE_PATH": "<PATH_TO_SAVE_FILE>",
+            },
+            "cwd": "${workspaceFolder}/runner/"
+        },
+    ]
+}
