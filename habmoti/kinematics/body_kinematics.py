@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import Generic, TypeVar
+from typing import Generic, TypeVar, override
 
 import numpy as np
 from numpy.typing import NDArray
@@ -13,6 +13,10 @@ class JointCenter(IntEnum):
 
     @staticmethod
     def from_name(name: str) -> "JointCenter":
+        raise NotImplementedError("This method should be implemented in subclasses of JointCenter")
+
+    @staticmethod
+    def segment_links(self) -> list[tuple["JointCenter", "JointCenter"]]:
         raise NotImplementedError("This method should be implemented in subclasses of JointCenter")
 
 
@@ -40,6 +44,25 @@ class JointCenter18Joints(JointCenter):
     def from_name(name: str) -> "JointCenter":
         return JointCenter18Joints[name.upper()]
 
+    @staticmethod
+    def segment_links() -> list[tuple["JointCenter", "JointCenter"]]:
+        # Define the segment links for the 18-joint model
+        return [
+            (JointCenter18Joints.NOSE, JointCenter18Joints.NECK),
+            (JointCenter18Joints.NECK, JointCenter18Joints.RIGHT_SHOULDER),
+            (JointCenter18Joints.NECK, JointCenter18Joints.LEFT_SHOULDER),
+            (JointCenter18Joints.RIGHT_SHOULDER, JointCenter18Joints.RIGHT_ELBOW),
+            (JointCenter18Joints.LEFT_SHOULDER, JointCenter18Joints.LEFT_ELBOW),
+            (JointCenter18Joints.RIGHT_ELBOW, JointCenter18Joints.RIGHT_WRIST),
+            (JointCenter18Joints.LEFT_ELBOW, JointCenter18Joints.LEFT_WRIST),
+            (JointCenter18Joints.NECK, JointCenter18Joints.RIGHT_HIP),
+            (JointCenter18Joints.NECK, JointCenter18Joints.LEFT_HIP),
+            (JointCenter18Joints.RIGHT_HIP, JointCenter18Joints.RIGHT_KNEE),
+            (JointCenter18Joints.LEFT_HIP, JointCenter18Joints.LEFT_KNEE),
+            (JointCenter18Joints.RIGHT_KNEE, JointCenter18Joints.RIGHT_ANKLE),
+            (JointCenter18Joints.LEFT_KNEE, JointCenter18Joints.LEFT_ANKLE),
+        ]
+
 
 JC = TypeVar("JC", bound=JointCenter)
 
@@ -57,6 +80,10 @@ class BodyKinematics(Generic[JC]):
     def joint_centers(self) -> NDArray[np.float64]:
         return self.values
 
+    @property
+    def body_list(self) -> list[NDArray[np.float64]]:
+        return [self.values]
+
 
 @dataclass(frozen=True)
 class MultiBodyKinematics(BodyKinematics[JC]):
@@ -71,3 +98,8 @@ class MultiBodyKinematics(BodyKinematics[JC]):
     @property
     def joint_centers(self) -> NDArray[np.float64]:
         return np.mean(self.values, axis=0)
+
+    @override
+    @property
+    def body_list(self) -> list[NDArray[np.float64]]:
+        return self.values

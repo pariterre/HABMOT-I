@@ -43,8 +43,7 @@ class Habmoti:
             self._analyzer.start(device=self._body_kinematics_device)
             self.threads.append(threading.Thread(target=self._analysis_loop, daemon=False))
         if self._has_viewer:
-            self._viewer.start(device=self._body_kinematics_device)
-            self.threads.append(threading.Thread(target=self._view_loop, daemon=False))
+            self.threads.append(threading.Thread(target=self._run_view_loop, daemon=False))
 
         for t in self.threads:
             t.start()
@@ -103,6 +102,16 @@ class Habmoti:
     def _has_viewer(self) -> bool:
         return self._viewer is not None
 
+    def _run_view_loop(self) -> None:
+        if self._viewer is None:
+            return
+
+        self._viewer.start(device=self._body_kinematics_device)
+        try:
+            self._view_loop()
+        except Exception as e:
+            _logger.error("Viewer loop error:", exc_info=e)
+
     def _view_loop(self) -> None:
         """
         View loop: continuously get frames from the queue and display them.
@@ -112,6 +121,6 @@ class Habmoti:
             try:
                 frame: FrameData = self._to_viewer_queue.get(timeout=0.5)
                 if self._viewer is not None:
-                    self._viewer.display(frame)
+                    self._viewer.update(frame)
             except queue.Empty:
                 continue

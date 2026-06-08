@@ -196,19 +196,18 @@ class ZedDevice(BodyKinematicsDevice):
 class MockedZedDevice(ZedDevice):
     def __init__(
         self,
-        configuration_filepath: Path,
         target_fps: int = 60,
         max_fps_lag_ms: int = 0,
+        **kwargs,
     ):
         """
         A mocked version of the ZedDevice that generates random body kinematics data. It is used for testing purposes.
         Args:
-            configuration_filepath: The path to the configuration file.
             target_fps: The target fps of the device.
             max_fps_lag_ms: The maximum lag in ms to add to the capture time to simulate fps variability. Set to 0 to have a fixed fps.
         """
 
-        super().__init__(configuration_filepath)
+        super().__init__(**kwargs)
 
         import time
 

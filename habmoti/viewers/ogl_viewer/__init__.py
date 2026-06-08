@@ -1,5 +1,5 @@
-from .viewer import GLViewer
+from .ogl_viewer import OGLViewer
 
 __all__ = [
-    GLViewer.__name__,
+    OGLViewer.__name__,
 ]
