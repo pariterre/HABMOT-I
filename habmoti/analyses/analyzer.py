@@ -1,15 +1,17 @@
 from abc import ABC, abstractmethod
 import io
 from pathlib import Path
-from typing import override
+from typing import override, TYPE_CHECKING
 
 from ..data.frame_data import FrameData
-from ..kinematics.body_kinematics_device import BodyKinematicsDevice
+
+if TYPE_CHECKING:
+    from ..habmoti import Habmoti
 
 
 class Analyzer(ABC):
     @abstractmethod
-    def start(self, device: BodyKinematicsDevice) -> None:
+    def start(self, habmoti: Habmoti) -> None:
         """
         Start the analyzer. This is called before the first frame is analyzed.
         """
@@ -43,10 +45,10 @@ class AnalyzerList(Analyzer):
         self._analyzers.append(analyzer)
 
     @override
-    def start(self, device: BodyKinematicsDevice) -> None:
+    def start(self, habmoti: Habmoti) -> None:
         self._is_locked = True
         for analyzer in self._analyzers:
-            analyzer.start(device=device)
+            analyzer.start(habmoti=habmoti)
 
     @override
     def perform(self, frame_data: FrameData) -> None:
@@ -70,13 +72,13 @@ class ToCsvAnalyzer(Analyzer):
         super().__init__()
 
     @override
-    def start(self, device: BodyKinematicsDevice) -> None:
+    def start(self, habmoti: Habmoti) -> None:
         self._file = open(self._filepath, "w")
 
         header = "timestamp, " + ", ".join(
             [
                 f"{joint_center.name}_x, {joint_center.name}_y, {joint_center.name}_z"
-                for joint_center in device.joint_center_type
+                for joint_center in habmoti.device.joint_center_type
             ]
         )
         self._file.write(header + "\n")

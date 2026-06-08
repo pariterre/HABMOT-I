@@ -1,13 +1,17 @@
 import math
 from threading import Lock
-from typing import override
+from typing import override, TYPE_CHECKING
 
 import array
 import numpy as np
 from numpy.typing import NDArray
 
-from ..analyzer import Analyzer, FrameData, BodyKinematicsDevice
+from ..analysis import AnalysesType
+from ..analyzer import Analyzer, FrameData
 from ...kinematics.body_kinematics import BodyKinematics, JointCenter
+
+if TYPE_CHECKING:
+    from ...habmoti import Habmoti
 
 _M_PI = 3.1415926
 
@@ -36,7 +40,7 @@ class ToOglAnalyzer(Analyzer):
         self._shader_sphere_pt = None
 
     @override
-    def start(self, device: BodyKinematicsDevice):
+    def start(self, habmoti: Habmoti):
         _OGL.glut.glutInit()
         wnd_w = _OGL.glut.glutGet(_OGL.glut.GLUT_SCREEN_WIDTH)
         wnd_h = _OGL.glut.glutGet(_OGL.glut.GLUT_SCREEN_HEIGHT)
@@ -94,6 +98,7 @@ class ToOglAnalyzer(Analyzer):
         if self._is_started:
             self._update_bodies(frame_data.body_kinematics)
             _OGL.glut.glutMainLoopEvent()
+        frame_data.analysis.current[AnalysesType.STOP_RECORDING] = not self._is_started
 
     def stop(self):
         if self._is_started:

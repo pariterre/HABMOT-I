@@ -24,7 +24,7 @@ class Habmoti:
         self._stop_event = threading.Event()
         self._capture_is_over_event = threading.Event()
 
-    def start(self) -> None:
+    def start(self, blocking: bool = True) -> None:
         """
         Start the pipeline threads.
         """
@@ -41,14 +41,28 @@ class Habmoti:
         for t in self.threads:
             t.start()
 
+        if blocking:
+            self.join()
+
+    def join(self):
+        for t in self.threads:
+            t.join()
+
     def stop(self):
         """
         Stop the pipeline threads.
         """
+        if self._stop_event.is_set():
+            return
         self._stop_event.set()
 
-        for t in self.threads:
-            t.join()
+    @property
+    def device(self) -> BodyKinematicsDevice:
+        return self._body_kinematics_device
+
+    @property
+    def analyzer(self) -> Analyzer:
+        return self._analyzer
 
     def _capture_loop(self) -> None:
         """
@@ -82,7 +96,7 @@ class Habmoti:
             return
 
         try:
-            self._analyzer.start(device=self._body_kinematics_device)
+            self._analyzer.start(habmoti=self)
             self._analysis_loop()
         except Exception as e:
             _logger.error("Analyzer loop error:", exc_info=e)

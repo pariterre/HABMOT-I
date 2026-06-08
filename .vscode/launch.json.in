@@ -19,6 +19,7 @@
                 "HABMOTI_ANALYZERS": "[\"<LIST_OF_ANALYZERS>\", \"<COMMA_SEPARATED>\"]", // Options: "to_console", "to_csv", "to_ogl"
                 "HABMOTI_TO_CONSOLE_ANALYZER_PARAMETERS": "{\"joint_center\": \"<DOF_TO_PRINT>\"}", // Options depends on the model used (e.g. of valid value: NOSE). Ignored if "to_console" not in "HABMOTI_ANALYZERS"
                 "HABMOTI_TO_CSV_ANALYZER_PARAMETERS": "{\"filepath\": \"PATH_TO_OUTPUT_FILE\"}", // Ignored if "to_csv" not in "HABMOTI_ANALYZERS"
+                "HABMOTI_CONTROLLER": "{\"max_runtime\": null}", // max_runtime can be set to [null] or omitted to run indefinitely
             },
             "cwd": "${workspaceFolder}/runner/"
         },

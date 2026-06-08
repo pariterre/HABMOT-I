@@ -13,6 +13,7 @@ from habmoti import (
     ToConsoleAnalyzer,
     ToCsvAnalyzer,
     ToOglAnalyzer,
+    ControllerAnalyzer,
 )
 
 
@@ -21,10 +22,7 @@ def main():
     analyzers = _select_analyzers(device=device)
 
     habmoti = Habmoti(body_kinematics_device=device, analyzer=analyzers)
-
     habmoti.start()
-    sleep(10)
-    habmoti.stop()
 
 
 def _select_device() -> BodyKinematicsDevice:
@@ -67,6 +65,8 @@ def _select_analyzers(device: BodyKinematicsDevice) -> Analyzer:
             analyzers.append(ToOglAnalyzer())
         else:
             raise NotImplementedError(f"Unsupported analyzer type: {analyzer}")
+
+    analyzers.append(ControllerAnalyzer(**json.loads(os.getenv("HABMOTI_CONTROLLER", "{}"))))
     return analyzers
 
 

@@ -1,7 +1,10 @@
-from typing import override
+from typing import override, TYPE_CHECKING
 
-from ..analyzer import Analyzer, FrameData, BodyKinematicsDevice
+from ..analyzer import Analyzer, FrameData
 from ...kinematics.body_kinematics import JointCenter
+
+if TYPE_CHECKING:
+    from ...habmoti import Habmoti
 
 
 class ToConsoleAnalyzer(Analyzer):
@@ -11,7 +14,7 @@ class ToConsoleAnalyzer(Analyzer):
         super().__init__()
 
     @override
-    def start(self, device: BodyKinematicsDevice) -> None:
+    def start(self, habmoti: Habmoti) -> None:
         pass
 
     @override
