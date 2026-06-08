@@ -1,11 +1,12 @@
 from abc import ABC, abstractmethod
 
 from ..data.frame_data import FrameData
+from ..kinematics.body_kinematics_device import BodyKinematicsDevice
 
 
 class Viewer(ABC):
     @abstractmethod
-    def start(self) -> None:
+    def start(self, device: BodyKinematicsDevice) -> None:
         """
         Start the viewer. This method is called before the first call to update.
         """

@@ -9,5 +9,8 @@
     },
     "python-envs.defaultEnvManager": "ms-python.python:conda",
     "python-envs.defaultPackageManager": "ms-python.python:conda",
-    "black-formatter.interpreter": [ "python" ]
+    "black-formatter.interpreter": [ "python" ],
+    "black-formatter.args": [
+        "--line-length", "120"
+    ]
 }

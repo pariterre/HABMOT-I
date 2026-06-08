@@ -3,15 +3,14 @@ import io
 from pathlib import Path
 from typing import override
 
-import numpy as np
-
 from ..data.frame_data import FrameData
 from ..kinematics.body_kinematics import JointCenter
+from ..kinematics.body_kinematics_device import BodyKinematicsDevice
 
 
 class Analyzer(ABC):
     @abstractmethod
-    def start(self) -> None:
+    def start(self, device: BodyKinematicsDevice) -> None:
         """
         Start the analyzer. This is called before the first frame is analyzed.
         """
@@ -39,9 +38,9 @@ class AnalyzerList(Analyzer):
         self.analyzers = analyzers
 
     @override
-    def start(self) -> None:
+    def start(self, device: BodyKinematicsDevice) -> None:
         for analyzer in self.analyzers:
-            analyzer.start()
+            analyzer.start(device=device)
 
     @override
     def perform(self, frame_data: FrameData) -> None:
@@ -56,7 +55,7 @@ class AnalyzerList(Analyzer):
 
 class EmptyAnalyzer(Analyzer):
     @override
-    def start(self) -> None:
+    def start(self, device: BodyKinematicsDevice) -> None:
         pass
 
     @override
@@ -69,21 +68,23 @@ class EmptyAnalyzer(Analyzer):
 
 
 class ToConsoleAnalyzer(Analyzer):
+    def __init__(self, joint_center: JointCenter):
+        self._joint_center = joint_center
+
+        super().__init__()
+
     @override
-    def start(self) -> None:
+    def start(self, device: BodyKinematicsDevice) -> None:
         pass
 
     @override
     def perform(self, frame_data: FrameData) -> None:
         import datetime
-        from ..kinematics.body_kinematics import JointCenter
 
         timestamp = frame_data.timestamp
         timestamp_as_date = datetime.datetime.fromtimestamp(timestamp / 1000.0)
 
-        print(
-            f"At {timestamp_as_date}, received: {frame_data.body_kinematics.joint_centers[JointCenter.LEFT_SHOULDER]}"
-        )
+        print(f"At {timestamp_as_date}, received: {frame_data.body_kinematics.joint_centers[self._joint_center]}")
 
     @override
     def stop(self) -> None:
@@ -97,27 +98,24 @@ class ToCsvAnalyzer(Analyzer):
 
         self._file: io.TextIOWrapper = None
 
+        super().__init__()
+
     @override
-    def start(self) -> None:
+    def start(self, device: BodyKinematicsDevice) -> None:
         self._file = open(self._filepath, "w")
-        
+
         header = "timestamp, " + ", ".join(
-            [f"{joint_center.name}_x, {joint_center.name}_y, {joint_center.name}_z" for joint_center in JointCenter]
+            [
+                f"{joint_center.name}_x, {joint_center.name}_y, {joint_center.name}_z"
+                for joint_center in device.joint_center_type
+            ]
         )
         self._file.write(header + "\n")
 
     @override
     def perform(self, frame_data: FrameData) -> None:
         timestamp = frame_data.timestamp
-        data = f"{np.array([
-            (
-                frame_data.body_kinematics.joint_centers[joint_center]
-                if joint_center in frame_data.body_kinematics.joint_centers
-                else (np.ndarray((3,)) * np.nan)
-            )
-            for joint_center in JointCenter
-        ]).flatten().tolist()}"
-
+        data = f"{frame_data.body_kinematics.joint_centers.flatten().tolist()}"
         self._file.write(f"{timestamp}, {data[1:-1]}\n")
 
     @override

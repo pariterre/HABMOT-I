@@ -40,10 +40,10 @@ class Habmoti:
         self._body_kinematics_device.start()
         self.threads = [threading.Thread(target=self._capture_loop, daemon=False)]
         if self._has_analyzer:
-            self._analyzer.start()
+            self._analyzer.start(device=self._body_kinematics_device)
             self.threads.append(threading.Thread(target=self._analysis_loop, daemon=False))
         if self._has_viewer:
-            self._viewer.start()
+            self._viewer.start(device=self._body_kinematics_device)
             self.threads.append(threading.Thread(target=self._view_loop, daemon=False))
 
         for t in self.threads:

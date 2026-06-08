@@ -1,7 +1,9 @@
 import pathlib as Path
-from typing import TYPE_CHECKING, override, Any
+from typing import TYPE_CHECKING, override
 
-from .body_kinematics import BodyKinematics, JointCenter
+import numpy as np
+
+from .body_kinematics import JointCenter, JointCenter18Joints, BodyKinematics, MultiBodyKinematics
 from .body_kinematics_device import BodyKinematicsDevice
 
 if TYPE_CHECKING:
@@ -19,6 +21,10 @@ class ZedDevice(BodyKinematicsDevice):
         self._fusion: "sl._sl.Fusion" = None
         self._rt: "sl._sl.BodyTrackingFusionRuntimeParameters" = None
         self._bodies: "sl._sl.Bodies" = None
+
+    @property
+    def joint_center_type(self) -> JointCenter:
+        return JointCenter18Joints
 
     @override
     def start(self) -> None:
@@ -38,14 +44,9 @@ class ZedDevice(BodyKinematicsDevice):
             self._fusion.retrieve_bodies(self._bodies, self._rt)
 
         # Convert the bodies to BodyKinematics
-        joint_centers = {}
-        for body in self._bodies.body_list:
-            for joint in body.skeleton.joints:
-                joint_center = JointCenter.from_joint_type(joint.type)
-                if joint_center is None:
-                    continue
-                joint_centers[joint_center] = (joint.position.x, joint.position.y, joint.position.z)
-        return BodyKinematics(joint_centers=joint_centers)
+        return MultiBodyKinematics(
+            joint_center_type=self.joint_center_type, values=[body.keypoint for body in self._bodies.body_list]
+        )
 
     @override
     def stop(self) -> None:
@@ -76,7 +77,9 @@ class ZedDevice(BodyKinematicsDevice):
 
     def _initialize_cameras(self):
         self._fusion_configurations = self._sl.read_fusion_configuration_file(
-            self._configuration_filepath, self._sl.COORDINATE_SYSTEM.RIGHT_HANDED_Y_UP, self._sl.UNIT.METER
+            str(self._configuration_filepath),
+            self._sl.COORDINATE_SYSTEM.RIGHT_HANDED_Y_UP,
+            self._sl.UNIT.METER,
         )
         if len(self._fusion_configurations) <= 0:
             raise ValueError(f"Invalid configuration file: {self._configuration_filepath}")
@@ -96,7 +99,10 @@ class ZedDevice(BodyKinematicsDevice):
 
         body_tracking_parameters = self._sl.BodyTrackingParameters()
         body_tracking_parameters.detection_model = self._sl.BODY_TRACKING_MODEL.HUMAN_BODY_ACCURATE
-        body_tracking_parameters.body_format = self._sl.BODY_FORMAT.BODY_18
+        if self.joint_center_type == JointCenter18Joints:
+            body_tracking_parameters.body_format = self._sl.BODY_FORMAT.BODY_18
+        else:
+            raise NotImplementedError(f"Unsupported joint center type: {self.joint_center_type}")
         body_tracking_parameters.enable_body_fitting = False
         body_tracking_parameters.enable_tracking = False
 
@@ -119,7 +125,10 @@ class ZedDevice(BodyKinematicsDevice):
 
                 status = self._senders[conf.serial_number].enable_positional_tracking(positional_tracking_parameters)
                 if status > self._sl.ERROR_CODE.SUCCESS:
-                    raise RuntimeError("Error enabling the positional tracking of camera", conf.serial_number)
+                    raise RuntimeError(
+                        "Error enabling the positional tracking of camera",
+                        conf.serial_number,
+                    )
 
                 status = self._senders[conf.serial_number].enable_body_tracking(body_tracking_parameters)
                 if status > self._sl.ERROR_CODE.SUCCESS:
@@ -155,7 +164,11 @@ class ZedDevice(BodyKinematicsDevice):
             conf = self._fusion_configurations[i]
             uuid = self._sl.CameraIdentifier()
             uuid.serial_number = conf.serial_number
-            print("Subscribing to", conf.serial_number, conf.communication_parameters.comm_type)
+            print(
+                "Subscribing to",
+                conf.serial_number,
+                conf.communication_parameters.comm_type,
+            )
 
             status = self._fusion.subscribe(uuid, conf.communication_parameters, conf.pose)
             if status != self._sl.FUSION_ERROR_CODE.SUCCESS:
@@ -181,7 +194,12 @@ class ZedDevice(BodyKinematicsDevice):
 
 
 class MockedZedDevice(ZedDevice):
-    def __init__(self, configuration_filepath: Path, target_fps: int = 60, max_fps_lag_ms: int = 0):
+    def __init__(
+        self,
+        configuration_filepath: Path,
+        target_fps: int = 60,
+        max_fps_lag_ms: int = 0,
+    ):
         """
         A mocked version of the ZedDevice that generates random body kinematics data. It is used for testing purposes.
         Args:
@@ -229,7 +247,7 @@ class MockedZedDevice(ZedDevice):
     RESOLUTION = type("RESOLUTION", (), {"HD1200": 0})
     BODY_TRACKING_MODEL = type("BODY_TRACKING_MODEL", (), {"HUMAN_BODY_ACCURATE": 0})
     BODY_FORMAT = type("BODY_FORMAT", (), {"BODY_18": 0})
-    COMM_TYPE = type("COMM_TYPE", (), {"LOCAL_NETWORK": 0, "CAMERA": 1})
+    COMM_TYPE = type("COMM_TYPE", (), {"LOCAL_NETWORK": 0, "INTRA_PROCESS": 1})
     ERROR_CODE = type("ERROR_CODE", (), {"SUCCESS": 0})
     FUSION_ERROR_CODE = type("FUSION_ERROR_CODE", (), {"SUCCESS": 0})
 
@@ -279,7 +297,10 @@ class MockedZedDevice(ZedDevice):
         return type(
             "CommunicationParameters",
             (),
-            {"set_for_shared_memory": lambda _: None, "comm_type": MockedZedDevice.COMM_TYPE.CAMERA},
+            {
+                "set_for_shared_memory": lambda _: None,
+                "comm_type": MockedZedDevice.COMM_TYPE.INTRA_PROCESS,
+            },
         )()
 
     @staticmethod
@@ -291,7 +312,12 @@ class MockedZedDevice(ZedDevice):
         return type(
             "BodyTrackingParameters",
             (),
-            {"detection_model": None, "body_format": None, "enable_body_fitting": None, "enable_tracking": None},
+            {
+                "detection_model": None,
+                "body_format": None,
+                "enable_body_fitting": None,
+                "enable_tracking": None,
+            },
         )()
 
     @staticmethod
@@ -309,7 +335,7 @@ class MockedZedDevice(ZedDevice):
                 "enable_body_tracking": lambda _, __: MockedZedDevice.ERROR_CODE.SUCCESS,
                 "start_publishing": lambda _, __: None,
                 "grab": lambda _: MockedZedDevice.ERROR_CODE.SUCCESS,
-                "retrieve_bodies": lambda self, bodies: MockedZedDevice._update_random_body_kinematics(self, bodies),
+                "retrieve_bodies": lambda _, bodies: MockedZedDevice._update_random_body_kinematics(bodies),
                 "close": lambda _: None,
             },
         )()
@@ -337,19 +363,13 @@ class MockedZedDevice(ZedDevice):
                 "subscribe": lambda _, __, ___, ____: MockedZedDevice.ERROR_CODE.SUCCESS,
                 "enable_body_tracking": lambda _, __: None,
                 "process": lambda _: MockedZedDevice.FUSION_ERROR_CODE.SUCCESS,
-                "retrieve_bodies": lambda self, bodies, __: MockedZedDevice._update_random_body_kinematics(
-                    self, bodies
-                ),
+                "retrieve_bodies": lambda _, bodies, __: MockedZedDevice._update_random_body_kinematics(bodies),
             },
         )()
 
     @staticmethod
     def Body():
-        return type(
-            "Body",
-            (),
-            {"skeleton": type("Skeleton", (), {"joints": []})()},
-        )()
+        return type("Body", (), {"keypoint": np.ndarray((18, 3)) * np.nan})()
 
     @staticmethod
     def Bodies():
@@ -380,21 +400,8 @@ class MockedZedDevice(ZedDevice):
         )()
 
     @staticmethod
-    def _update_random_body_kinematics(source, bodies):
-        import random
-
+    def _update_random_body_kinematics(bodies):
         if not bodies.body_list:
             bodies.body_list = [MockedZedDevice.Body() for _ in range(2)]
             for body in bodies.body_list:
-                body.skeleton.joints = [
-                    type(
-                        "Joint", (), {"type": i, "position": type("Position", (), {"x": None, "y": None, "z": None})()}
-                    )()
-                    for i in range(18)
-                ]
-
-        for body in bodies.body_list:
-            for joint in body.skeleton.joints:
-                joint.position.x = random.uniform(-1, 1)
-                joint.position.y = random.uniform(-1, 1)
-                joint.position.z = random.uniform(0, 2)
+                body.keypoint = np.random.rand((18, 3))
