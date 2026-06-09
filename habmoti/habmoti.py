@@ -4,7 +4,7 @@ import time
 import threading
 
 from .data.frame_data import FrameData
-from .analyses.analyzer import Analyzer
+from .analyzers.analyzer import Analyzer
 from .controllers.controller import Controller
 from .kinematics.body_kinematics_device import BodyKinematicsDevice
 

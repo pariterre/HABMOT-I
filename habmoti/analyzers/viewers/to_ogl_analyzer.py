@@ -6,7 +6,6 @@ import array
 import numpy as np
 from numpy.typing import NDArray
 
-from ..analysis import AnalysesType
 from ..analyzer import Analyzer
 
 if TYPE_CHECKING:

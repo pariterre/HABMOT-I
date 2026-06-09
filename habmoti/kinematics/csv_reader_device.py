@@ -10,7 +10,7 @@ from .body_kinematics_device import BodyKinematicsDevice
 from ..data.body_kinematics import BodyModel18Joints, BodyKinematics
 from ..data.frame_data import FrameData
 from ..version import __version__ as habmoti_version
-from ..analyses.file_io.to_csv_analyzer import _csv_version as csv_version
+from ..analyzers.file_io.to_csv_analyzer import _csv_version as csv_version
 
 if TYPE_CHECKING:
     from ..data.body_kinematics import BodyModel

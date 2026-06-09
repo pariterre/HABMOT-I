@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
-from ..analyses.analysis import Analysis
+from .analysis import Analysis
 
 if TYPE_CHECKING:
     from .body_kinematics import BodyKinematics
