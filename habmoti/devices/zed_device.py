@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, override
 
 import numpy as np
 
-from .body_kinematics_device import BodyKinematicsDevice
+from .device import Device
 from ..data.body_kinematics import BodyModel18Joints, MultiBodyKinematics
 from ..data.frame_data import FrameData
 
@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     import pyzed.sl as sl  # type: ignore
 
 
-class ZedDevice(BodyKinematicsDevice):
+class ZedDevice(Device):
     def __init__(self, configuration_filepath: Path):
         self._load_module()
 

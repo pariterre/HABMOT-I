@@ -6,7 +6,7 @@ from typing import override, TYPE_CHECKING
 import numpy as np
 from packaging import version as version_checker
 
-from .body_kinematics_device import BodyKinematicsDevice
+from .device import Device
 from ..data.body_kinematics import BodyModel18Joints, BodyKinematics
 from ..data.frame_data import FrameData
 from ..version import __version__ as habmoti_version
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from ..data.body_kinematics import BodyModel
 
 
-class CsvReaderDevice(BodyKinematicsDevice):
+class CsvReaderDevice(Device):
     def __init__(self, filepath: Path):
         self._filepath = filepath
         self._parse_header()

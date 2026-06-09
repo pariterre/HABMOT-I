@@ -3,10 +3,10 @@ import queue
 import time
 import threading
 
-from .data.frame_data import FrameData
 from .analyzers.analyzer import Analyzer
 from .controllers.controller import Controller
-from .kinematics.body_kinematics_device import BodyKinematicsDevice
+from .data.frame_data import FrameData
+from .devices.device import Device
 
 _logger = logging.getLogger(__name__)
 
@@ -14,11 +14,11 @@ _logger = logging.getLogger(__name__)
 class Habmoti:
     def __init__(
         self,
-        body_kinematics_device: BodyKinematicsDevice,
+        device: Device,
         analyzer: Analyzer | None = None,
         controller: Controller | None = None,
     ):
-        self._body_kinematics_device = body_kinematics_device
+        self._device = device
         self._analyzer = analyzer
         self._controller = controller
 
@@ -37,7 +37,7 @@ class Habmoti:
         self._capture_is_over_event.clear()
 
         # Start the pipeline and their associated threads
-        self._body_kinematics_device.start()
+        self._device.start()
         self.threads = [threading.Thread(target=self._capture_loop, daemon=False)]
         if self._has_analyzer:
             self.threads.append(threading.Thread(target=self._run_analysis_loop, daemon=False))
@@ -63,8 +63,8 @@ class Habmoti:
         self._stop_event.set()
 
     @property
-    def device(self) -> BodyKinematicsDevice:
-        return self._body_kinematics_device
+    def device(self) -> Device:
+        return self._device
 
     @property
     def analyzer(self) -> Analyzer:
@@ -81,7 +81,7 @@ class Habmoti:
         try:
             while not self._stop_event.is_set():
                 try:
-                    frame_data = self._body_kinematics_device.get_current_frame_data()
+                    frame_data = self._device.get_current_frame_data()
 
                     if self._has_analyzer:
                         self._to_analyzer_queue.put(frame_data)
@@ -94,7 +94,7 @@ class Habmoti:
                 except Exception as e:
                     _logger.error("Capture error:", exc_info=e)
 
-            self._body_kinematics_device.stop()
+            self._device.stop()
 
         finally:
             self._capture_is_over_event.set()

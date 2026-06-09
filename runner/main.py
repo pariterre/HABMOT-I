@@ -5,7 +5,7 @@ from time import sleep
 
 from habmoti import (
     Habmoti,
-    BodyKinematicsDevice,
+    Device,
     ZedDevice,
     MockedZedDevice,
     CsvReaderDevice,
@@ -25,11 +25,11 @@ def main():
     analyzers = _select_analyzers(device=device)
     controllers = _select_controller()
 
-    habmoti = Habmoti(body_kinematics_device=device, analyzer=analyzers, controller=controllers)
+    habmoti = Habmoti(device=device, analyzer=analyzers, controller=controllers)
     habmoti.start()
 
 
-def _select_device() -> BodyKinematicsDevice:
+def _select_device() -> Device:
     device_type = os.getenv("HABMOTI_DEVICE_TYPE")
     if device_type is None:
         raise ValueError("Environment variable 'HABMOTI_DEVICE_TYPE' is not set")
@@ -49,7 +49,7 @@ def _select_device() -> BodyKinematicsDevice:
     return device
 
 
-def _select_analyzers(device: BodyKinematicsDevice) -> Analyzer:
+def _select_analyzers(device: Device) -> Analyzer:
     analyzers = AnalyzerList()
     for analyzer in json.loads(os.getenv("HABMOTI_ANALYZERS", "[]")):
         if analyzer == "to_console":

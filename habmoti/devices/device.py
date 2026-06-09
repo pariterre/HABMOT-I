@@ -6,7 +6,7 @@ if TYPE_CHECKING:
     from ..data.frame_data import FrameData
 
 
-class BodyKinematicsDevice(ABC):
+class Device(ABC):
     @property
     @abstractmethod
     def body_model(self) -> type[BodyModel]:
