@@ -35,6 +35,7 @@ class ToOglAnalyzer(Analyzer):
         # Prepare internal elements
         self._shader_sk_image: _Shader = None
         self._shader_sk_mvp = None
+        self._shader_sk_color = None
         self._shader_sphere_image = None
         self._shader_sphere_mvp = None
         self._shader_sphere_color = None
@@ -71,6 +72,7 @@ class ToOglAnalyzer(Analyzer):
         # Compile and create the shader for 3D objects
         self._shader_sk_image = _Shader(self._vertex_shader(), self._fragment_shader())
         self._shader_sk_mvp = _OGL.gl.glGetUniformLocation(self._shader_sk_image.get_program_id(), "u_mvpMatrix")
+        self._shader_sk_color = _OGL.gl.glGetUniformLocation(self._shader_sk_image.get_program_id(), "u_color")
 
         self._shader_sphere_image = _Shader(self._sphere_shader(), self._fragment_shader())
         self._shader_sphere_mvp = _OGL.gl.glGetUniformLocation(
@@ -187,7 +189,7 @@ class ToOglAnalyzer(Analyzer):
 
         _OGL.gl.glPolygonMode(_OGL.gl.GL_FRONT_AND_BACK, _OGL.gl.GL_FILL)
         for body in self._skeletons:
-            body.draw_joint_links(self._shader_sphere_color)
+            body.draw_joint_links(self._shader_sk_color)
         _OGL.gl.glUseProgram(0)
 
         _OGL.gl.glUseProgram(self._shader_sphere_image.get_program_id())

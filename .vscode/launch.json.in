@@ -13,7 +13,7 @@
             "justMyCode": true,
             "env": {
                 "PYTHONPATH": "${workspaceFolder}",
-                "HABMOTI_DEVICE_TYPE": "<DEVICE_TO_USE>", // Options: "zed", "mocked_zed" 
+                "HABMOTI_DEVICE_TYPE": "<DEVICE_TO_USE>", // Options: "zed", "mocked_zed", "csv_reader"
                 "HABMOTI_ZED_PARAMETERS": "{\"configuration_filepath\": \"<PATH_TO_CONFIG_FILE>\"}", // Ignored if HABMOTI_DEVICE_TYPE =/= "zed"
                 "HABMOTI_MOCKED_ZED_PARAMETERS": "{\"target_fps\": <FPS_TO_SIMULATE_AS_INT>, \"max_fps_lag_ms\": <VARABILITY_TO_SIMULATE_AS_INT>}", // Ignored if HABMOTI_DEVICE_TYPE =/= "mocked_zed"
                 "HABMOTI_CSV_READER_PARAMETERS": "{\"filepath\": \"<PATH_TO_INPUT_FILE>\"}", // Ignored if HABMOTI_DEVICE_TYPE =/= "csv_reader"
