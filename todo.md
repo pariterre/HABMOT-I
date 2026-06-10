@@ -13,6 +13,3 @@ Abandonne:
         - Aligner les bassins
         - Aligner un objet commun
 
-Complete le README
-
-- Configurer le fichier launch.json.in

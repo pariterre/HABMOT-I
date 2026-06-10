@@ -27,9 +27,16 @@ dependencies = [
 [project.optional-dependencies]
 test = [
     "pytest",
-    "matplotlib",
+]
+zed_mocker = [
+    # "biorbd",  # Not available on pip, so it must be installed manually and not listed as a dependency
+]
+gui_opengl = [
     "pyopengl",
     "pyopengl_accelerate",
+]
+gui_matplotlib = [
+    "matplotlib",
 ]
 
 [project.urls]
