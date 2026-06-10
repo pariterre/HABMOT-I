@@ -47,7 +47,7 @@ class ZedDevice(Device):
             self._fusion.retrieve_bodies(self._bodies, self._rt)
 
         return FrameData(
-            timestamp=int(self._fusion.get_timestamp()),
+            timestamp=int(self._fusion.get_current_timestamp().data_ns),
             body_kinematics=MultiBodyKinematics(
                 body_model=self.body_model, values=[body.keypoint for body in self._bodies.body_list]
             ),

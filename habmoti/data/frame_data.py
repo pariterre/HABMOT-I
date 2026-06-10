@@ -9,6 +9,15 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True)
 class FrameData:
-    timestamp: float
+    """
+    Data for a single frame of motion capture data.
+
+    Attributes:
+        timestamp: The timestamp to epoch of the frame in milliseconds.
+        body_kinematics: The kinematics of the body for this frame.
+        analysis: The analysis results for this frame, which can be populated after processing the kinematics
+    """
+
+    timestamp: int
     body_kinematics: BodyKinematics
     analysis: Analysis = field(default_factory=Analysis)
