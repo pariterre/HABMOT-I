@@ -16,6 +16,3 @@ Abandonne:
 Complete le README
 
 - Configurer le fichier launch.json.in
-- fichier de calibration
-- Transcrire ce qui a ete envoye par courriel
-- sudo apt install freeglut3-dev
