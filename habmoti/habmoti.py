@@ -27,7 +27,7 @@ class Habmoti:
 
         self._analyzers_ready_event = threading.Event()
         self._controllers_ready_event = threading.Event()
-        self._stop_event = threading.Event()
+        self._stop_capture_request_event = threading.Event()
         self._capture_is_over_event = threading.Event()
 
     def start(self, blocking: bool = True) -> None:
@@ -37,22 +37,15 @@ class Habmoti:
 
         self._analyzers_ready_event.clear()
         self._controllers_ready_event.clear()
-        self._stop_event.clear()
+        self._stop_capture_request_event.clear()
         self._capture_is_over_event.clear()
 
         # Start the pipeline and their associated threads
-        self._device.start()
-        self.threads = [threading.Thread(target=self._capture_loop, daemon=False)]
-
-        if self._has_analyzer:
-            self.threads.append(threading.Thread(target=self._run_analysis_loop, daemon=False))
-        else:
-            self._analyzers_ready_event.set()
-
-        if self._has_controller:
-            self.threads.append(threading.Thread(target=self._run_controller_loop, daemon=False))
-        else:
-            self._controllers_ready_event.set()
+        self.threads = [
+            threading.Thread(target=self._run_capture_loop, daemon=False), 
+            threading.Thread(target=self._run_analysis_loop, daemon=False), 
+            threading.Thread(target=self._run_controller_loop, daemon=False)
+        ]
 
         for t in self.threads:
             t.start()
@@ -68,9 +61,7 @@ class Habmoti:
         """
         Stop the pipeline threads.
         """
-        if self._stop_event.is_set():
-            return
-        self._stop_event.set()
+        self._stop_capture_request_event.set()
 
     @property
     def device(self) -> Device:
@@ -84,32 +75,62 @@ class Habmoti:
     def controller(self) -> Controller:
         return self._controller
 
+    @property
+    def is_capturing_data(self) -> bool:
+        return not self._capture_is_over_event.is_set() and not self._stop_capture_request_event.is_set()
+
+    @property
+    def _are_all_threads_ready(self) -> bool:
+        return self._analyzers_ready_event.is_set() and self._controllers_ready_event.is_set()
+
+    def _run_capture_loop(self) -> None:
+        """
+        Prepare the device for capture, then continuously capture data from the device and put it in the queue until stopped.
+        """
+        try: 
+            _logger.warning(
+                "WARNING: Starting the device inside a sub-thread may cause issues. "
+                "When this modification is tested and confirmed with a real device, you can remove this warning."
+            )
+            self._device.start()
+            self._wait_for_capture_to_be_ready_to_start()
+            self._capture_loop()
+        except Exception as e:
+            _logger.error("Capture loop error:", exc_info=e)
+        finally:
+            self._capture_is_over_event.set()
+
+        try:
+            self._device.stop()
+        except Exception as e:
+            _logger.error("Failed to stop device:", exc_info=e)
+
+    def _wait_for_capture_to_be_ready_to_start(self) -> None:
+        """
+        Wait for the analyzers and controllers to be ready before starting the capture loop.
+        """
+        while self.is_capturing_data and not self._are_all_threads_ready:
+            time.sleep(0.1)
+
     def _capture_loop(self) -> None:
         """
         Capture loop: continuously capture data from the device and put it in the queue.
         """
-        try:
-            while not self._analyzers_ready_event.is_set() or not self._controllers_ready_event.is_set():
-                time.sleep(0.1)
 
-            while not self._stop_event.is_set():
-                try:
-                    frame_data = self._device.get_current_frame_data()
+        analyses = {}
+        while self.is_capturing_data:
+            try:
+                frame_data = self._device.get_current_frame_data()
 
-                    if self._has_analyzer:
-                        self._to_analyzer_queue.put(frame_data)
-                    if self._has_controller:
-                        self._to_controller_queue.put(frame_data)
+                if self._has_analyzer:
+                    self._to_analyzer_queue.put({"frame_data": frame_data, "analyses": analyses})
+                if self._has_controller:
+                    self._to_controller_queue.put({"frame_data": frame_data, "analyses": analyses})
 
-                    # Rest the CPU a bit to avoid a busy loop when the device is fast (e.g., mocked device or csv reader)
-                    time.sleep(0.001)
-                except Exception as e:
-                    _logger.error("Capture error:", exc_info=e)
-
-            self._device.stop()
-
-        finally:
-            self._capture_is_over_event.set()
+                # Rest the CPU a bit to avoid a busy loop when the device is fast (e.g., mocked device or csv reader)
+                time.sleep(0.001)
+            except Exception as e:
+                _logger.error("Capture error:", exc_info=e)
 
     @property
     def _has_analyzer(self) -> bool:
@@ -117,6 +138,7 @@ class Habmoti:
 
     def _run_analysis_loop(self) -> None:
         if self._analyzer is None:
+            self._analyzers_ready_event.set()
             return
 
         try:
@@ -124,7 +146,9 @@ class Habmoti:
             self._analyzers_ready_event.set()
             self._analysis_loop()
         except Exception as e:
-            _logger.error("Analyzer loop error:", exc_info=e)
+            _logger.error("Stopping data capture as analyzer failed:", exc_info=e)
+            self.stop()
+            return
 
     def _analysis_loop(self) -> None:
         """
@@ -133,10 +157,12 @@ class Habmoti:
         """
         while not self._capture_is_over_event.is_set() or not self._to_analyzer_queue.empty():
             try:
-                frame: FrameData | None = self._to_analyzer_queue.get(timeout=0.5)
-                if frame is None:
+                data: dict = self._to_analyzer_queue.get(timeout=0.5)
+                frame_data: FrameData | None = data.get("frame_data")
+                analyses: dict = data.get("analyses", {})
+                if frame_data is None:
                     continue
-                self._analyzer.perform(frame)
+                self._analyzer.perform(frame_data)
             except queue.Empty:
                 continue
 
@@ -146,6 +172,7 @@ class Habmoti:
 
     def _run_controller_loop(self) -> None:
         if self._controller is None:
+            self._controllers_ready_event.set()
             return
 
         try:
@@ -153,7 +180,9 @@ class Habmoti:
             self._controllers_ready_event.set()
             self._controller_loop()
         except Exception as e:
-            _logger.error("Controller loop error:", exc_info=e)
+            _logger.error("Stopping data capture as controller failed:", exc_info=e)
+            self.stop()
+            return
 
     def _controller_loop(self) -> None:
         """
@@ -162,7 +191,9 @@ class Habmoti:
         """
         while not self._capture_is_over_event.is_set() or not self._to_controller_queue.empty():
             try:
-                frame: FrameData | None = self._to_controller_queue.get(timeout=0.5)
-                self._controller.perform(frame)
+                data: dict = self._to_controller_queue.get(timeout=0.5)
+                frame_data: FrameData | None = data.get("frame_data")
+                analyses: dict = data.get("analyses", {})
+                self._controller.perform(frame_data)
             except queue.Empty:
                 continue

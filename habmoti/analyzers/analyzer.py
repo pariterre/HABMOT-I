@@ -12,7 +12,6 @@ class Analyzer(ABC):
         """
         Start the analyzer. This is called before the first frame is analyzed.
         """
-        pass
 
     @abstractmethod
     def perform(self, frame_data: FrameData) -> None:
@@ -28,7 +27,6 @@ class Analyzer(ABC):
         """
         Stop the analyzer. This is called when the analyzer is no longer needed.
         """
-        pass
 
 
 class AnalyzerList(Analyzer):

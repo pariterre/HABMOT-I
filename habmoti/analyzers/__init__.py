@@ -1,9 +1,11 @@
 from .analyzer import Analyzer, AnalyzerList
 from .file_io import *
+from .movement_analyzers import *
 from .viewers import *
 
 __all__ = (
     file_io.__all__
+    + movement_analyzers.__all__
     + viewers.__all__
     + [
         Analyzer.__name__,
