@@ -22,8 +22,12 @@ class InterfaceCli:
             if command[0] == "quit":
                 print("Exiting the CLI. Goodbye!")
                 break
+
             elif command[0] == "device":
                 self._handle_device_command(command)
+
+            elif command[0] == "analyzer":
+                self._handle_analyzer_command(command)
 
             elif command[0] == "start":
                 self._habmoti.start()
@@ -32,16 +36,21 @@ class InterfaceCli:
                 print("  Available commands:")
                 print("    help - Show this help message")
                 print("    device - Manage devices (type 'device help' for more information)")
+                print("    analyzer - Manage analyzers (type 'analyzer help' for more information)")
                 print("    start - Start the HABMOT-I system")
                 print("    quit - Exit the CLI")
-                # Add more commands here as needed
             else:
-                print(f"  Unknown command: {command}. Type 'help' for a list of commands.")
+                print(f"  Unknown command: {command[0]}. Type 'help' for a list of commands.")
 
     def _handle_device_command(self, command: list[str]):
         if len(command) < 2:
-            print("  Please specify a subcommand for 'device'. Type 'device help' for more information.")
-            return
+            print("  Specify a subcommand for 'device' ('list' for available devices), leave empty to go back: ")
+            while True:
+                subcommand = input("[Habmoti / device]> ").strip().lower().split()
+                if not subcommand:
+                    return
+                else:
+                    self._handle_device_command([command[0], *subcommand])
         if command[1] == "help":
             self._handle_device_help_command()
         elif command[1] == "list":
@@ -49,7 +58,7 @@ class InterfaceCli:
         elif command[1] == "connect":
             self._handle_device_connect_command(command)
         elif command[1] == "connected":
-            print(f"  Connected device: {self._habmoti.device.name}")
+            print(f"  Connected device: {self._habmoti.device.name if self._habmoti.device is not None else 'None'}")
         else:
             print(f"  Unknown 'device' subcommand: '{command[1]}'. Type 'device help' for a list of subcommands.")
 
@@ -80,9 +89,9 @@ class InterfaceCli:
                 return
 
         if len(command) < 3:
-            print("  Specify the device to add ('list' for available devices), leave empty to cancel: ")
+            print("  Specify the device to connect ('list' for available devices), leave empty to cancel: ")
             while True:
-                device_name = input("[Habmoti - device add]> ").strip().lower()
+                device_name = input("[Habmoti / device connect]> ").strip().lower()
                 if device_name == "":
                     return
                 elif device_name == "list":
@@ -141,3 +150,28 @@ class InterfaceCli:
 
         self._habmoti.device = CsvReaderDevice(filepath=Path(filepath))
         print("  CSV reader added.")
+
+    def _handle_analyzer_command(self, command: list[str]):
+        if len(command) < 2:
+            print("  Specify a subcommand for 'analyzer' ('list' for available analyzers), leave empty to go back: ")
+            while True:
+                subcommand = input("[Habmoti / analyzer]> ").strip().lower().split()
+                if not subcommand:
+                    return
+                else:
+                    self._handle_analyzer_command([command[0], *subcommand])
+        if command[1] == "help":
+            self._handle_analyzer_help_command()
+        elif command[1] == "list":
+            self._handle_analyzer_list_command()
+        else:
+            print(f"  Unknown 'analyzer' subcommand: '{command[1]}'. Type 'analyzer help' for a list of subcommands.")
+
+    def _handle_analyzer_help_command(self):
+        print("  Available 'analyzer' subcommands:")
+        print("    help - Show this help message")
+        print("    list - List available analyzers")
+
+    def _handle_analyzer_list_command(self):
+        print("  Available analyzers:")
+        print("    (No analyzers available yet)")
