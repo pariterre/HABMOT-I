@@ -1,14 +1,14 @@
 from datetime import datetime
 from typing import override, TYPE_CHECKING
 
-from ..analyzer import Analyzer
+from .data_writer_analyzer import DataWriterAnalyzer
 
 if TYPE_CHECKING:
     from ...data.body_kinematics import BodyModel
     from ...habmoti import Habmoti, FrameData
 
 
-class ToConsoleAnalyzer(Analyzer):
+class ToConsoleAnalyzer(DataWriterAnalyzer):
     def __init__(self, joint_center: BodyModel):
         self._joint_center = joint_center
 

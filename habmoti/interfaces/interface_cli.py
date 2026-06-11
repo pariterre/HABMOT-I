@@ -190,6 +190,10 @@ class InterfaceCli:
             self._handle_analyzer_list_command()
         elif command[0] == "viewer":
             self._handle_analyzer_viewer_command(command[1:])
+        elif command[0] == "writer":
+            # TODO - RENDU ICI
+            # TODO: Move ToConsole in writer instead of viewer
+            self._handle_analyzer_writer_command(command[1:])
         else:
             print(
                 f"  Unknown 'analyzer' subcommand: '{command[0]}'. Use the 'help' subcommand for a list of subcommands."
@@ -217,18 +221,7 @@ class InterfaceCli:
                     self._handle_analyzer_viewer_command(subcommand)
 
         if command[0] == "help":
-            print("  Available 'viewer' subcommands:")
-            print("    help - Show this help message")
-            print(
-                "    add <viewer_name> - Add a viewer analyzer to the system. "
-                "If <viewer_name> is not specified, you will be prompted to enter it."
-            )
-            print("    added - Show the currently added analyzers")
-            print(
-                "    remove <analyzer_index> - Remove the analyzer with the specified index. "
-                "You can see the indices by using the 'added' subcommand."
-            )
-            print("    back,.. - Go back to the previous menu")
+            self._handle_analyzer_viewer_help_command()
         elif command[0] == "add":
             self._handle_analyzer_viewer_add_command(command[1:])
         elif command[0] == "added":
@@ -239,6 +232,18 @@ class InterfaceCli:
             print(
                 f"  Unknown 'viewer' subcommand: '{command[0]}'. Use the 'help' subcommand for a list of subcommands."
             )
+
+    def _handle_analyzer_viewer_help_command(self):
+        print("  Available 'viewer' subcommands:")
+        print("    help - Show this help message")
+        print(
+            "    add <viewer_name> - Add a viewer analyzer to the system. If <viewer_name> is not specified, you will be prompted to enter it."
+        )
+        print("    added - Show the currently added analyzers")
+        print(
+            "    remove <analyzer_index> - Remove the analyzer with the specified index. You can see the indices by using the 'added' subcommand."
+        )
+        print("    back,.. - Go back to the previous menu")
 
     def _handle_analyzer_viewer_add_command(self, command: list[str]):
         if self._habmoti.device is None:
