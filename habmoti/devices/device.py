@@ -9,6 +9,13 @@ if TYPE_CHECKING:
 class Device(ABC):
     @property
     @abstractmethod
+    def name(self) -> str:
+        """
+        The name of the device. This is used to identify the device in the CLI and in the logs.
+        """
+
+    @property
+    @abstractmethod
     def body_model(self) -> type[BodyModel]:
         """
         The type of body model provided by this device (this must be the same declared in BodyKinematics)

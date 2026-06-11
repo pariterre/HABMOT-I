@@ -38,6 +38,11 @@ class CsvReaderDevice(Device):
         self._current_index: int = None
         self._previous_frame_time: time.time = None
 
+    @property
+    @override
+    def name(self) -> str:
+        return f"CSV Reader ({self._filepath.name})"
+
     @override
     def start(self) -> None:
         self._data = np.genfromtxt(self._filepath, delimiter=",", skip_header=self._header_len + 1)
@@ -127,6 +132,7 @@ class CsvReaderDevice(Device):
         return self._device_type
 
     @property
+    @override
     def body_model(self) -> type[BodyModel]:
         return self._body_model
 

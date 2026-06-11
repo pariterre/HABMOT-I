@@ -26,6 +26,12 @@ class ZedDevice(Device):
         self._bodies: "sl._sl.Bodies" = None
 
     @property
+    @override
+    def name(self) -> str:
+        return "ZED Camera"
+
+    @property
+    @override
     def body_model(self) -> type[BodyModel]:
         return BodyModel18Joints
 
@@ -219,6 +225,11 @@ class MockedZedDevice(ZedDevice):
         self._dt = 1 / target_fps
         self._max_fps_lag = max_fps_lag_ms / 1000.0
         self._previous_capture_time = time.time()
+
+    @property
+    @override
+    def name(self) -> str:
+        return "ZED (Mocked) Camera"
 
     @override
     def _load_module(self):

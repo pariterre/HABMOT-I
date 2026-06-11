@@ -19,7 +19,7 @@ class Habmoti:
         self._device = device
         self._analyzer = analyzer
 
-        self._started = False
+        self._is_started = False
         self._threads: list[threading.Thread] = [
             threading.Thread(target=self._run_capture_loop, daemon=False),
             threading.Thread(target=self._run_analysis_loop, daemon=False),
@@ -29,6 +29,10 @@ class Habmoti:
         self._stop_request_event = threading.Event()
 
         self._to_analyzer_queue = queue.Queue()
+
+    @property
+    def is_started(self) -> bool:
+        return self._is_started
 
     def start(self, blocking: bool = True) -> None:
         """
@@ -44,7 +48,7 @@ class Habmoti:
         for t in self._threads:
             t.start()
 
-        self._started = True
+        self._is_started = True
         if blocking:
             self._join()
 
@@ -62,12 +66,12 @@ class Habmoti:
             t.join()
 
     @property
-    def device(self) -> Device:
+    def device(self) -> Device | None:
         return self._device
 
     @device.setter
     def device(self, device: Device) -> None:
-        if self._started:
+        if self._is_started:
             raise RuntimeError(
                 "Cannot change device while the pipeline is running. Please stop the pipeline before changing the device."
             )
@@ -129,7 +133,7 @@ class Habmoti:
 
         # Wait until the analyzer queue is empty before setting started to False
         self._to_analyzer_queue.join()
-        self._started = False
+        self._is_started = False
 
     @property
     def _has_analyzer(self) -> bool:
