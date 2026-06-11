@@ -106,7 +106,7 @@ class ToOglAnalyzer(Analyzer):
     @override
     def dispose(self):
         if self._habmoti is not None:
-            self._habmoti.stop()
+            self._habmoti.stop(blocking=False)
         self._habmoti = None
         if self._is_started:
             self._is_started = False

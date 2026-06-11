@@ -44,11 +44,14 @@ class Habmoti:
         if blocking:
             self._join()
 
-    def stop(self):
+    def stop(self, blocking: bool = True) -> None:
         """
         Stop the pipeline threads.
         """
         self._stop_request_event.set()
+
+        if blocking:
+            self._join()
 
     def _join(self):
         for t in self._threads:
