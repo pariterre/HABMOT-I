@@ -32,6 +32,10 @@ class CsvReaderDevice(Device):
         """
 
         self._filepath = filepath
+        if self._filepath.suffix != "" and self._filepath.suffix != ".csv":
+            raise ValueError("The filepath must have a .csv extension (or left empty)")
+        self._filepath = self._filepath.with_suffix(".csv")
+
         self._frame_per_second = frame_per_second
         self._parse_header()
         self._data: NDArray[np.float64] = None

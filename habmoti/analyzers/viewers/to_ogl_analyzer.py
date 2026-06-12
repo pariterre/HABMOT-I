@@ -111,7 +111,7 @@ class ToOglAnalyzer(DataViewerAnalyzer):
     @override
     def dispose(self):
         if self._habmoti is not None:
-            self._habmoti.terminate(blocking=False)
+            self._habmoti.terminate()
         self._habmoti = None
         if self._is_started:
             self._is_started = False

@@ -11,6 +11,25 @@ from ..devices.csv_reader_device import CsvReaderDevice
 from ..habmoti import Habmoti
 
 
+def navigable_menu(func):
+    def wrapper(self, commands: list[str], previous_commands: list[str] = []):
+        has_navigated = not commands
+        if has_navigated:
+            commands = _prompt_commands(previous_commands=previous_commands)
+        if not commands:
+            return wrapper(self, commands=[], previous_commands=previous_commands)
+
+        if has_navigated and (commands[0] in ["back", ".."]):
+            return
+
+        ignore_has_navigated = func(self, commands, previous_commands)
+
+        if not ignore_has_navigated and has_navigated:
+            return wrapper(self, commands=[], previous_commands=previous_commands)
+
+    return wrapper
+
+
 class InterfaceCli:
     def __init__(self):
         self._habmoti = Habmoti(analyzer=AnalyzerList())
@@ -18,63 +37,64 @@ class InterfaceCli:
     def exec(self) -> None:
         print("Welcome to the HABMOT-I CLI!")
         print("Type 'help' for a list of commands, or 'quit' to quit.")
+
+        commands = []
+
         while True:
             try:
-                command = input("[Habmoti]> ").strip().lower().split()
-            except:
+                commands = _prompt_commands(previous_commands=[])
+            except Exception as e:
                 print("Error reading input. Please try again.")
                 continue
-            if command[0] == "quit":
+
+            if not commands:
+                continue
+            elif commands[0] == "quit":
                 print("Exiting the HABMOT-I CLI. Goodbye!")
                 break
-            elif command[0] == "device":
-                self._handle_device_command(command[1:])
-            elif command[0] == "analyzer":
-                self._handle_analyzer_command(command[1:])
-            elif command[0] == "controller":
-                self._handle_controller_command(command[1:])
-            elif command[0] == "help":
+            elif commands[0] == "device":
+                self._handle_device_command(commands[1:], [commands[0]])
+            elif commands[0] == "analyzer":
+                self._handle_analyzer_command(commands[1:], [commands[0]])
+            elif commands[0] == "controller":
+                self._handle_controller_command(commands[1:], [commands[0]])
+            elif commands[0] in ["help", "h"]:
                 print("""  Available commands:
-    help - Show this help message
-    device - Manage devices (type 'device help' for more information)
-    analyzer - Manage analyzers (type 'analyzer help' for more information)
+    help,h     - Show this help message
+    device     - Manage devices (type 'device help' for more information)
+    analyzer   - Manage analyzers (type 'analyzer help' for more information)
     controller - Start the HABMOT-I system
-    quit - Exit the CLI
+    quit       - Exit the CLI
     
     When navigating through subcommands, you can usually type 'help' for more information on the subcommands and also type"
     'list' to see available options. To go back to the previous menu, leave the input empty or type 'back'.""")
             else:
-                print(f"  Unknown command: {command[0]}. Type 'help' for a list of commands.")
+                print(f"  Unknown command: {commands[0]}. Type 'help' for a list of commands.")
 
-    def _handle_device_command(self, command: list[str]):
-        if not command:
-            while True:
-                subcommand = input("[Habmoti / device]> ").strip().lower().split()
-                if not subcommand or subcommand[0] in ["back", ".."]:
-                    return
-                else:
-                    self._handle_device_command(subcommand)
-
-        if command[0] == "help":
+    @navigable_menu
+    def _handle_device_command(self, commands: list[str], previous_commands: list[str]) -> bool:
+        ignore_has_navigated = False
+        if commands[0] in ["help", "h"]:
             self._handle_device_help_command()
-        elif command[0] in ["list", "ls"]:
+        elif commands[0] in ["list", "ls"]:
             self._handle_device_list_command()
-        elif command[0] == "add":
-            self._handle_device_add_command(command[1:])
-        elif command[0] == "added":
+        elif commands[0] == "add":
+            self._handle_device_add_command(commands[1:], previous_commands + [commands[0]])
+        elif commands[0] == "added":
             print(f"  Added device: {self._habmoti.device.name if self._habmoti.device is not None else 'None'}")
         else:
             print(
-                f"  Unknown 'device' subcommand: '{command[0]}'. Use the 'help' subcommand for a list of subcommands."
+                f"  Unknown 'device' subcommand: '{commands[0]}'. Use the 'help' subcommand for a list of subcommands."
             )
+        return ignore_has_navigated
 
     def _handle_device_help_command(self):
         print("""Available 'device' subcommands:
-    help - Show this help message.
-    list,ls - List available devices.
-    add <device_name> - add a device to the system. If <device_name> is not specified, you will be prompted to enter it.
-    added - Show the currently added device.
-    back,.. - Go back to the previous menu.""")
+    help,h            - Show this help message.
+    list,ls           - List available devices.
+    add <device_name> - Add a device to the system. If <device_name> is not specified, you will be prompted to enter it.
+    added             - Show the currently added device.
+    back,..           - Go back to the previous menu.""")
 
     def _handle_device_list_command(self):
         print("""  Available devices:
@@ -82,7 +102,7 @@ class InterfaceCli:
     zed_mocked - ZED (Mocked) camera
     csv_reader - CSV reader""")
 
-    def _handle_device_add_command(self, command: list[str]):
+    def _handle_device_add_command(self, commands: list[str], previous_commands: list[str] = []):
         if self._habmoti.is_initialized:
             print(
                 "  Cannot change device while Habmoti is started. Please stop the pipeline before changing the device."
@@ -91,7 +111,7 @@ class InterfaceCli:
         if self._habmoti.device is not None:
             response = (
                 input(
-                    "  A device is already connected. Please note, this will remove the current analyzer. "
+                    "  A device is already added. Please note, this will remove the current analyzer. "
                     "Do you want to continue?  (y/N) "
                 )
                 .strip()
@@ -99,83 +119,82 @@ class InterfaceCli:
             )
             if response != "y":
                 return
+        self._handle_device_add_command_guarded(commands=commands, previous_commands=previous_commands)
 
-        if len(command) < 1:
-            while True:
-                subcommand = input("[Habmoti / device / connect]> ").strip().lower().split()
-                if not subcommand or subcommand[0] in ["back", ".."]:
-                    return
-                else:
-                    self._handle_device_add_command(subcommand)
-        device_name = command[0]
+    @navigable_menu
+    def _handle_device_add_command_guarded(self, commands: list[str], previous_commands: list[str] = []) -> bool:
+        ignore_has_navigated = False
 
         try:
-            if device_name in ["list", "ls", "help"]:
+            if commands[0] in ["list", "ls", "help", "h"]:
                 self._handle_device_list_command()
-            elif device_name == "zed" or device_name == "zed_mocked":
-                self._handle_device_connect_zed_command(device_name)
-            elif device_name == "csv_reader":
-                self._handle_device_connect_csv_reader_command(command[1:])
+            elif commands[0] == "zed" or commands[0] == "zed_mocked":
+                self._handle_device_add_zed_command(device_name=commands[0], parameters=commands[1:])
+                ignore_has_navigated = True
+            elif commands[0] == "csv_reader":
+                self._handle_device_add_csv_reader_command(commands[1:])
+                ignore_has_navigated = True
             else:
-                print(f"  Unknown device: {device_name}. Use the 'list' subcommand for available devices.")
+                print(f"  Unknown device: {commands[0]}. Use the 'list' subcommand for available devices.")
         except Exception as e:
-            print(f"  Failed to connect device: {e}")
+            print(f"  Failed to add device: {e}")
 
-    def _safe_device_connect(self, device: Device):
+        return ignore_has_navigated
+
+    def _safe_device_add(self, device: Device):
         self._habmoti.analyzer = None
         self._habmoti.device = device
         self._habmoti.analyzer = AnalyzerList()
 
-    def _handle_device_connect_zed_command(self, device_name: str):
+    def _handle_device_add_zed_command(self, device_name: str, parameters: list[str]):
         is_mock = device_name == "zed_mocked"
-        config_path = input(
-            "  A configuration file is required to use the ZED camera. If not done already, you can create one by using the ZED360 tool.\n"
-            "  Path of the file [default=zed_configuration.json]: "
-        ).strip()
-        if config_path == "":
-            config_path = "zed_configuration.json"
 
+        parameters = _fill_parameters(
+            all_keys=["filepath"] + (["fps", "max_lag"] if is_mock else []), parameters=parameters
+        )
+
+        config_path = _get_if_not_in_parameters(
+            parameters,
+            key="filepath",
+            prompt="A configuration file is required to use the ZED camera. If not done already, you can create one by using the ZED360 tool.\n  Path of the file",
+            default="zed_configuration.json",
+            value_type=str,
+        )
         if is_mock:
-            target_fps = input("  Target FPS [default=30]: ").strip()
-            if target_fps == "":
-                target_fps = 30
-            else:
-                target_fps = int(target_fps)
+            target_fps = _get_if_not_in_parameters(
+                parameters, key="fps", prompt="Target FPS", default=30, value_type=int
+            )
+            max_fps_lag_ms = _get_if_not_in_parameters(
+                parameters, key="max_lag", prompt="Max FPS lag in ms", default=0, value_type=int
+            )
 
-            max_fps_lag_ms = input("  Max FPS lag in ms [default=0]: ").strip()
-            if max_fps_lag_ms == "":
-                max_fps_lag_ms = 0
-            else:
-                max_fps_lag_ms = int(max_fps_lag_ms)
-
-            self._safe_device_connect(
+            self._safe_device_add(
                 device=MockedZedDevice(
                     configuration_filepath=config_path, target_fps=target_fps, max_fps_lag_ms=max_fps_lag_ms
                 )
             )
         else:
-            self._safe_device_connect(device=ZedDevice(configuration_filepath=config_path))
+            self._safe_device_add(device=ZedDevice(configuration_filepath=config_path))
         print(f"  ZED{' (Mocked)' if is_mock else ''} camera added.")
 
-    def _handle_device_connect_csv_reader_command(self, command: list[str]):
-        if not command:
-            filepath = input("  Path of the CSV file to read (leave empty to cancel): ").strip()
-            if filepath == "":
-                return
-        else:
-            filepath = command[0]
+    def _handle_device_add_csv_reader_command(self, parameters: list[str]):
+        parameters = _fill_parameters(all_keys=["filepath"], parameters=parameters)
+        filepath = _get_if_not_in_parameters(
+            parameters,
+            key="filepath",
+            prompt="Path of the CSV file to read (leave empty to cancel)",
+            value_type=str,
+        )
+        if not filepath:
+            return
 
-        self._safe_device_connect(device=CsvReaderDevice(filepath=Path(filepath)))
+        self._safe_device_add(device=CsvReaderDevice(filepath=Path(filepath)))
         print("  CSV reader added.")
 
-    def _handle_analyzer_command(self, command: list[str], filter_type: str | None = None):
-        if not command:
-            while True:
-                subcommand = input("[Habmoti / analyzer]> ").strip().lower().split()
-                if not subcommand or subcommand[0] in ["back", ".."]:
-                    return
-                else:
-                    self._handle_analyzer_command(subcommand)
+    @navigable_menu
+    def _handle_analyzer_command(self, command: list[str], previous_commands: list[str]) -> bool:
+        ignore_has_navigated = False
+
         if command[0] in ["help", "h"]:
             self._handle_analyzer_help_command()
         elif command[0] in ["list_types", "lt"]:
@@ -183,7 +202,7 @@ class InterfaceCli:
         elif command[0] in ["list", "ls"]:
             self._handle_analyzers_list_command()
         elif command[0] == "add":
-            self._handle_analyzer_add_command(command[1:])
+            self._handle_analyzer_add_command(command[1:], previous_commands=previous_commands + [command[0]])
         elif command[0] == "added":
             self._handle_analyzer_added_command()
         elif command[0] == "remove":
@@ -192,6 +211,7 @@ class InterfaceCli:
             print(
                 f"  Unknown 'analyzer' subcommand: '{command[0]}'. Use the 'help' subcommand for a list of subcommands."
             )
+        return ignore_has_navigated
 
     def _handle_analyzer_help_command(self):
         print("""  Available 'analyzer' subcommands:
@@ -218,9 +238,9 @@ class InterfaceCli:
       console    - Print the joint positions to the console
       csv        - Write the joint positions to a CSV file""")
 
-    def _handle_analyzer_add_command(self, command: list[str]):
+    def _handle_analyzer_add_command(self, commands: list[str], previous_commands: list[str]):
         if self._habmoti.device is None:
-            print("  You need to connect a device before adding an analyzer.")
+            print("  You need to add a device before adding an analyzer.")
             return
         if not isinstance(self._habmoti.analyzer, AnalyzerList):
             raise ValueError(
@@ -228,29 +248,33 @@ class InterfaceCli:
                 "This should not happen, you are invited to contact the developers."
             )
 
-        if not command:
-            while True:
-                subcommand = input("[Habmoti / analyzer / add]> ").strip().lower().split()
-                if not subcommand or subcommand[0] in ["back", ".."]:
-                    return
-                else:
-                    self._handle_analyzer_add_command(subcommand)
+        self._handle_analyzer_add_command_guarded(commands, previous_commands)
+
+    @navigable_menu
+    def _handle_analyzer_add_command_guarded(self, commands: list[str], previous_commands: list[str]) -> bool:
+        ignore_has_navigated = False
 
         try:
-            if command[0] in ["list", "ls"]:
+            if commands[0] in ["list", "ls"]:
                 self._handle_analyzers_list_command()
-            elif command[0] == "matplotlib":
+            elif commands[0] == "matplotlib":
                 self._handle_add_matplotlib_command()
-            elif command[0] == "opengl":
+                ignore_has_navigated = True
+            elif commands[0] == "opengl":
                 self._handle_add_opengl_command()
-            elif command[0] == "console":
-                self._handle_add_console_command(command[1:])
-            elif command[0] == "csv":
-                self._handle_add_csv_command(command[1:])
+                ignore_has_navigated = True
+            elif commands[0] == "console":
+                self._handle_add_console_command(commands[1:])
+                ignore_has_navigated = True
+            elif commands[0] == "csv":
+                self._handle_add_csv_command(commands[1:])
+                ignore_has_navigated = True
             else:
-                print(f"  Unknown viewer analyzer: {command[0]}. Use the 'list' subcommand for available analyzers.")
+                print(f"  Unknown viewer analyzer: {commands[0]}. Use the 'list' subcommand for available analyzers.")
         except Exception as e:
             print(f"  Failed to add analyzer: {e}")
+
+        return ignore_has_navigated
 
     def _handle_add_matplotlib_command(self):
         self._habmoti.analyzer.append(ToMatplotlibAnalyzer())
@@ -260,12 +284,17 @@ class InterfaceCli:
         self._habmoti.analyzer.append(ToOglAnalyzer())
         print("  Added an OpenGL viewer.")
 
-    def _handle_add_console_command(self, command: list[str]):
-        joint_center_name = (
-            input("  Joint center name (leave empty to cancel): ").strip() if len(command) < 1 else command[0]
+    def _handle_add_console_command(self, parameters: list[str]):
+        parameters = _fill_parameters(all_keys=["joint"], parameters=parameters)
+        joint_center_name = _get_if_not_in_parameters(
+            parameters,
+            key="joint",
+            prompt="Joint center name (leave empty to cancel)",
+            value_type=str,
         )
-        if joint_center_name == "":
+        if not joint_center_name:
             return
+
         try:
             joint_center = self._habmoti.device.body_model.from_name(joint_center_name)
         except:
@@ -312,43 +341,76 @@ class InterfaceCli:
         del analyzers[index]
         print(f"  Removed analyzer: {removed_analyzer_name}")
 
-    def _handle_add_csv_command(self, command: list[str]):
-        filepath = input("  CSV file path (leave empty to cancel): ").strip() if len(command) < 1 else command[0]
-        if filepath == "":
+    def _handle_add_csv_command(self, parameters: list[str]):
+        parameters = _fill_parameters(all_keys=["filepath"], parameters=parameters)
+        filepath = _get_if_not_in_parameters(
+            parameters,
+            key="filepath",
+            prompt="CSV file path (leave empty to cancel)",
+            value_type=str,
+        )
+        if not filepath:
             return
+
         try:
             csv_path = Path(filepath)
         except:
             raise ValueError(f"Invalid CSV file path: {filepath}")
-        self._habmoti.analyzer.append(ToCsvAnalyzer(filepath=csv_path))
+
+        auto_increment = _get_if_not_in_parameters(
+            parameters,
+            key="auto_increment",
+            prompt="Automatically increment filename if it already exists? (y/N)",
+            default="y",
+            value_type=lambda x: x.strip().lower() == "y",
+        )
+        allow_overwrite = _get_if_not_in_parameters(
+            parameters,
+            key="allow_overwrite",
+            prompt="Allow overwriting existing files? (y/N)",
+            default="N",
+            value_type=lambda x: x.strip().lower() == "y",
+        )
+
+        self._habmoti.analyzer.append(
+            ToCsvAnalyzer(filepath=csv_path, auto_increment=auto_increment, allow_overwrite=allow_overwrite)
+        )
         print(f"  Added a CSV writer.")
 
-    def _handle_controller_command(self, command: list[str]):
+    def _handle_controller_command(self, command: list[str], previous_commands: list[str]) -> bool:
         if self._habmoti.device is None:
-            print("  You need to connect a device before starting the controller.")
+            print("  You need to add a device before starting the controller.")
             return
-
-        if not command:
-            while True:
-                subcommand = input("[Habmoti / controller]> ").strip().lower().split()
-                if not subcommand or subcommand[0] in ["back", ".."]:
-                    return
-                else:
-                    self._handle_controller_command(subcommand)
-        if command[0] in ["help", "h"]:
-            self._handle_controller_help_command()
-        elif command[0] == "initialize":
-            self._handle_controller_initialize_command()
-        elif command[0] == "terminate":
-            self._handle_controller_terminate_command()
-        elif command[0] == "start":
-            self._handle_controller_start_command()
-        elif command[0] == "stop":
-            self._handle_controller_stop_command()
-        else:
-            print(
-                f"  Unknown 'controller' subcommand: '{command[0]}'. Use the 'help' subcommand for a list of subcommands."
+        if not isinstance(self._habmoti.analyzer, AnalyzerList):
+            raise ValueError(
+                "Analyzer should be an AnalyzerList to use multiple analyzers. "
+                "This should not happen, you are invited to contact the developers."
             )
+        self._handle_controller_command_guarded(command, previous_commands=previous_commands)
+
+    @navigable_menu
+    def _handle_controller_command_guarded(self, command: list[str], previous_commands: list[str]) -> bool:
+        ignore_has_navigated = False
+
+        try:
+            if command[0] in ["help", "h"]:
+                self._handle_controller_help_command()
+            elif command[0] == "initialize":
+                self._handle_controller_initialize_command()
+            elif command[0] == "terminate":
+                self._handle_controller_terminate_command()
+            elif command[0] == "start":
+                self._handle_controller_start_command()
+            elif command[0] == "stop":
+                self._handle_controller_stop_command()
+            else:
+                print(
+                    f"  Unknown 'controller' subcommand: '{command[0]}'. Use the 'help' subcommand for a list of subcommands."
+                )
+        except Exception as e:
+            print(f"  Controller error: {e}")
+
+        return ignore_has_navigated
 
     def _handle_controller_help_command(self):
         print("""  Available 'controller' subcommands:
@@ -381,3 +443,32 @@ class InterfaceCli:
             return
         self._habmoti.stop_trial()
         print("HABMOT-I stopped the current trial.")
+
+
+def _prompt_commands(previous_commands: list[str]):
+    prompt = f"[{' / '.join(['Habmoti'] + previous_commands)}]> "
+    try:
+        command = input(prompt).strip().lower().split()
+    except:
+        print("Error reading input. Please try again.")
+        return _prompt_commands(previous_commands)
+    return command
+
+
+def _fill_parameters(all_keys: list[str], parameters: list[str]):
+    output = {key: None for key in all_keys}
+
+    return output | {
+        key: value for param in parameters if "=" in param for key, value in [param.split("=", 1)] if key in all_keys
+    }
+
+
+def _get_if_not_in_parameters(parameters: dict, key: str, prompt: str, default=None, value_type=str):
+    if key in parameters and parameters[key]:
+        return value_type(parameters[key])
+    else:
+        value_str = input(f"  {prompt}{'' if default is None else f' [default={default}]'}: ").strip()
+        if not value_str:
+            return default
+        else:
+            return value_type(value_str)

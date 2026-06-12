@@ -20,10 +20,9 @@ class Habmoti:
         self._analyzer = analyzer
 
         self._is_initialized = False
-        self._threads: list[threading.Thread] = [
-            threading.Thread(target=self._run_capture_loop, daemon=False),
-            threading.Thread(target=self._run_analysis_loop, daemon=False),
-        ]
+        self._is_trial_started = False
+
+        self._threads: list[threading.Thread] = []
         self._analyzer_ready_event = threading.Event()
         self._capture_has_ended_event = threading.Event()
         self._stop_request_event = threading.Event()
@@ -34,10 +33,15 @@ class Habmoti:
     def is_initialized(self) -> bool:
         return self._is_initialized
 
-    def initialize(self, blocking: bool = True) -> None:
+    def initialize(self) -> None:
         """
         Initialize the pipeline threads.
         """
+        if self._is_initialized:
+            raise RuntimeError(
+                "Pipeline is already initialized. Please stop the pipeline before initializing it again."
+            )
+
         if self._device is None:
             raise ValueError("No device set. Please set a device before initializing the pipeline.")
 
@@ -45,23 +49,22 @@ class Habmoti:
         self._capture_has_ended_event.clear()
         self._stop_request_event.clear()
 
+        self._threads = [
+            threading.Thread(target=self._run_capture_loop, daemon=False),
+            threading.Thread(target=self._run_analysis_loop, daemon=False),
+        ]
         for t in self._threads:
             t.start()
 
         self._is_initialized = True
-        if blocking:
-            self._join()
 
-    def terminate(self, blocking: bool = True) -> None:
+    def exec(self) -> None:
         """
-        Terminate the pipeline threads.
+        Execute the pipeline. This method blocks until the pipeline is terminated.
         """
-        self._stop_request_event.set()
+        if not self._is_initialized:
+            raise RuntimeError("Pipeline is not initialized. Please initialize the pipeline before executing it.")
 
-        if blocking:
-            self._join()
-
-    def _join(self):
         for t in self._threads:
             t.join()
 
@@ -70,12 +73,30 @@ class Habmoti:
         Start a trial
         """
         self._analyzer.start_trial()
+        self._is_trial_started = True
 
     def stop_trial(self):
         """
         Stop a trial
         """
         self._analyzer.stop_trial()
+        self._is_trial_started = False
+
+    def terminate(self) -> None:
+        """
+        Terminate the pipeline threads.
+        """
+        if not self._is_initialized:
+            return
+
+        if self._stop_request_event.is_set():
+            return
+
+        if self._is_trial_started:
+            self.stop_trial()
+
+        self._stop_request_event.set()
+        self._threads = []
 
     @property
     def device(self) -> Device | None:
