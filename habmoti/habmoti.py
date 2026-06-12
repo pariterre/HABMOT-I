@@ -19,7 +19,7 @@ class Habmoti:
         self._device = device
         self._analyzer = analyzer
 
-        self._is_started = False
+        self._is_initialized = False
         self._threads: list[threading.Thread] = [
             threading.Thread(target=self._run_capture_loop, daemon=False),
             threading.Thread(target=self._run_analysis_loop, daemon=False),
@@ -31,15 +31,15 @@ class Habmoti:
         self._to_analyzer_queue = queue.Queue()
 
     @property
-    def is_started(self) -> bool:
-        return self._is_started
+    def is_initialized(self) -> bool:
+        return self._is_initialized
 
-    def start(self, blocking: bool = True) -> None:
+    def initialize(self, blocking: bool = True) -> None:
         """
-        Start the pipeline threads.
+        Initialize the pipeline threads.
         """
         if self._device is None:
-            raise ValueError("No device set. Please set a device before starting the pipeline.")
+            raise ValueError("No device set. Please set a device before initializing the pipeline.")
 
         self._analyzer_ready_event.clear()
         self._capture_has_ended_event.clear()
@@ -48,13 +48,13 @@ class Habmoti:
         for t in self._threads:
             t.start()
 
-        self._is_started = True
+        self._is_initialized = True
         if blocking:
             self._join()
 
-    def stop(self, blocking: bool = True) -> None:
+    def terminate(self, blocking: bool = True) -> None:
         """
-        Stop the pipeline threads.
+        Terminate the pipeline threads.
         """
         self._stop_request_event.set()
 
@@ -65,13 +65,25 @@ class Habmoti:
         for t in self._threads:
             t.join()
 
+    def start_trial(self):
+        """
+        Start a trial
+        """
+        self._analyzer.start_trial()
+
+    def stop_trial(self):
+        """
+        Stop a trial
+        """
+        self._analyzer.stop_trial()
+
     @property
     def device(self) -> Device | None:
         return self._device
 
     @device.setter
     def device(self, device: Device) -> None:
-        if self._is_started:
+        if self._is_initialized:
             raise RuntimeError(
                 "Cannot change device while the pipeline is running. Please stop the pipeline before changing the device."
             )
@@ -87,7 +99,7 @@ class Habmoti:
 
     @analyzer.setter
     def analyzer(self, analyzer: Analyzer | None) -> None:
-        if self._is_started:
+        if self._is_initialized:
             raise RuntimeError(
                 "Cannot change analyzer while the pipeline is running. Please stop the pipeline before changing the analyzer."
             )
@@ -145,7 +157,7 @@ class Habmoti:
 
         # Wait until the analyzer queue is empty before setting started to False
         self._to_analyzer_queue.join()
-        self._is_started = False
+        self._is_initialized = False
 
     @property
     def _has_analyzer(self) -> bool:
@@ -162,7 +174,7 @@ class Habmoti:
             self._analysis_loop()
         except Exception as e:
             _logger.error("Analyzer failed, stopping data capture. Stack trace:\n", exc_info=e)
-            self.stop()
+            self.terminate()
         finally:
             self._analyzer.dispose()
 
@@ -172,6 +184,7 @@ class Habmoti:
         When the capture is over, the loop continues until the queue is empty then stops.
         """
         while not self._capture_has_ended_event.is_set() or not self._to_analyzer_queue.empty():
+            is_empty = False
             try:
                 data: dict = self._to_analyzer_queue.get(timeout=0.5)
                 frame_data: FrameData | None = data.get("frame_data")
@@ -181,7 +194,9 @@ class Habmoti:
                 self._analyzer.perform(frame_data)
 
             except queue.Empty:
+                is_empty = True
                 continue
 
             finally:
-                self._to_analyzer_queue.task_done()
+                if not is_empty:
+                    self._to_analyzer_queue.task_done()

@@ -24,7 +24,7 @@ class InterfaceFromEnvironment:
         self._habmoti = Habmoti(device=self._device, analyzer=self._analyzers)
 
     def exec(self) -> None:
-        self._habmoti.start(blocking=True)
+        self._habmoti.initialize(blocking=True)
 
 
 def _select_device() -> Device:

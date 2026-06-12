@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import override, TYPE_CHECKING
 
-from ..analyzer import Analyzer
+from .data_movement_analyzer import DataMovementAnalyzer
 
 if TYPE_CHECKING:
     from ..analyzer import Habmoti, FrameData
@@ -13,7 +13,7 @@ class JumpEvent:
     end_frame: int
 
 
-class HorizontalJumpAnalyzer(Analyzer):
+class HorizontalJumpAnalyzer(DataMovementAnalyzer):
     def __init__(self):
         super().__init__()
 

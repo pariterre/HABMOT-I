@@ -21,12 +21,24 @@ class Analyzer(ABC):
         """
 
     @abstractmethod
+    def start_trial(self) -> None:
+        """
+        Start a trial. This is called when a trial is started. The perform method may be called after this method is called.
+        """
+
+    @abstractmethod
     def perform(self, frame_data: FrameData) -> None:
         """
         Analyze a frame of data.
 
         Args:
             frame_data: The data to analyze. The analysis is stored in the frame_data itself
+        """
+
+    @abstractmethod
+    def stop_trial(self) -> None:
+        """
+        Stop a trial. This is called when a trial is stopped. The perform method should not be called after this method is called.
         """
 
     @abstractmethod
@@ -60,9 +72,19 @@ class AnalyzerList(Analyzer):
             analyzer.initialize(habmoti=habmoti)
 
     @override
+    def start_trial(self) -> None:
+        for analyzer in self._analyzers:
+            analyzer.start_trial()
+
+    @override
     def perform(self, frame_data: FrameData) -> None:
         for analyzer in self._analyzers:
             analyzer.perform(frame_data)
+
+    @override
+    def stop_trial(self) -> None:
+        for analyzer in self._analyzers:
+            analyzer.stop_trial()
 
     @override
     def dispose(self) -> None:

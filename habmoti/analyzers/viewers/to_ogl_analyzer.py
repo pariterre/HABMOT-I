@@ -6,7 +6,7 @@ import array
 import numpy as np
 from numpy.typing import NDArray
 
-from ..analyzer import Analyzer
+from .data_viewer_analyzer import DataViewerAnalyzer
 
 if TYPE_CHECKING:
     from ..analyzer import Habmoti, FrameData
@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 _M_PI = 3.1415926
 
 
-class ToOglAnalyzer(Analyzer):
+class ToOglAnalyzer(DataViewerAnalyzer):
     """
     Class that manages input events, window and OpenGL rendering pipeline
     """
@@ -111,7 +111,7 @@ class ToOglAnalyzer(Analyzer):
     @override
     def dispose(self):
         if self._habmoti is not None:
-            self._habmoti.stop(blocking=False)
+            self._habmoti.terminate(blocking=False)
         self._habmoti = None
         if self._is_started:
             self._is_started = False

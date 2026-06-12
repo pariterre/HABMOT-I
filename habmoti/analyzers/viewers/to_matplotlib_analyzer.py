@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, override
 
 import numpy as np
 
-from ..analyzer import Analyzer
+from .data_viewer_analyzer import DataViewerAnalyzer
 
 if TYPE_CHECKING:
     from ...habmoti import Habmoti
@@ -218,7 +218,7 @@ def _compute_equal_limits(
     )
 
 
-class ToMatplotlibAnalyzer(Analyzer):
+class ToMatplotlibAnalyzer(DataViewerAnalyzer):
     """Render body kinematics in a live 3D Matplotlib view."""
 
     def __init__(self):

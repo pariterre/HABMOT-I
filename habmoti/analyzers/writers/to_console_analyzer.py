@@ -17,7 +17,7 @@ class ToConsoleAnalyzer(DataWriterAnalyzer):
     @property
     @override
     def name(self) -> str:
-        return f"Console Viewer ({self._joint_center.name})"
+        return f"Console Writer ({self._joint_center.name})"
 
     @override
     def initialize(self, habmoti: Habmoti) -> None:

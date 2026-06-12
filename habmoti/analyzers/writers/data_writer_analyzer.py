@@ -14,14 +14,14 @@ class DataWriterAnalyzer(Analyzer):
         """
         return self._is_writing
 
-    def start_writing(self) -> None:
+    def start_trial(self) -> None:
         """
-        Starts writing data.
+        Starts a trial.
         """
         self._is_writing = True
 
-    def stop_writing(self) -> None:
+    def stop_trial(self) -> None:
         """
-        Stops writing data.
+        Stops a trial.
         """
         self._is_writing = False
