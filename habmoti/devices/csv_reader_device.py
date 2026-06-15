@@ -14,6 +14,7 @@ from ..data.frame_data import FrameData
 from ..version import __version__ as habmoti_version
 
 if TYPE_CHECKING:
+    from ..habmoti import Habmoti
     from ..data.body_kinematics import BodyModel
 
 
@@ -36,6 +37,8 @@ class CsvReaderDevice(Device):
             raise ValueError("The filepath must have a .csv extension (or left empty)")
         self._filepath = self._filepath.with_suffix(".csv")
 
+        self._habmoti: Habmoti | None = None
+
         self._frame_per_second = frame_per_second
         try:
             self._parse_header()
@@ -51,7 +54,9 @@ class CsvReaderDevice(Device):
         return f"CSV Reader ({self._filepath.name})"
 
     @override
-    def start(self) -> None:
+    def start(self, habmoti: Habmoti) -> None:
+        self._habmoti = habmoti
+
         self._data = np.genfromtxt(self._filepath, delimiter=",", skip_header=self._header_len + 1)
         self._data = self._data[1:]  # Remove the header row (all nans)
         self._current_index = -1
@@ -59,6 +64,11 @@ class CsvReaderDevice(Device):
 
     @override
     def get_current_frame_data(self) -> FrameData | None:
+        if self._current_index < 0 and not self._habmoti.is_trial_started:
+            self._habmoti.start_trial()
+        elif self._current_index >= self._data.shape[0] and self._habmoti.is_trial_started:
+            self._habmoti.stop_trial()
+
         self._current_index += 1
         if self._current_index >= self._data.shape[0]:
             return None

@@ -9,6 +9,7 @@ from ..data.body_kinematics import BodyModel18Joints, MultiBodyKinematics
 from ..data.frame_data import FrameData
 
 if TYPE_CHECKING:
+    from ..habmoti import Habmoti
     from ..data.body_kinematics import BodyModel
     import pyzed.sl as sl  # type: ignore
 
@@ -36,7 +37,7 @@ class ZedDevice(Device):
         return BodyModel18Joints
 
     @override
-    def start(self) -> None:
+    def start(self, habmoti: Habmoti) -> None:
         self._initialize_cameras()
         self._initialize_body_tracking()
 

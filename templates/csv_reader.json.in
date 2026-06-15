@@ -3,7 +3,7 @@
         "name": "csv_reader",
         "parameters": {
             "filepath": "<PATH_TO_CSV_FILE>",
-            "frame_per_second": "< 0 (frame by frame) | -1 (original frame rate) | None (as fast as possible) | [positive integer] (custom frame rate) >"
+            "frame_per_second": < 0 (frame by frame) | -1 (original frame rate) | None (as fast as possible) | [positive integer] (custom frame rate) >
         }
     },
     "analyzers": [

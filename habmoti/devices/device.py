@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from ..habmoti import Habmoti
     from ..data.body_kinematics import BodyModel
     from ..data.frame_data import FrameData
 
@@ -22,7 +23,7 @@ class Device(ABC):
         """
 
     @abstractmethod
-    def start(self) -> None:
+    def start(self, habmoti: Habmoti) -> None:
         """
         Start the device. This method should be called before calling get_current_frame_data.
         """

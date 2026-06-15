@@ -27,7 +27,7 @@ class Analyzer(ABC):
         """
 
     @abstractmethod
-    def perform(self, frame_data: FrameData) -> None:
+    def perform(self, frame_data: FrameData | None) -> None:
         """
         Analyze a frame of data.
 
@@ -77,7 +77,7 @@ class AnalyzerList(Analyzer):
             analyzer.start_trial()
 
     @override
-    def perform(self, frame_data: FrameData) -> None:
+    def perform(self, frame_data: FrameData | None) -> None:
         for analyzer in self._analyzers:
             analyzer.perform(frame_data)
 

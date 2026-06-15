@@ -32,7 +32,7 @@ class ToConsoleAnalyzer(DataWriterAnalyzer):
         self._joint_center = habmoti._device.body_model.from_name(self._joint_center_name)
 
     @override
-    def perform(self, frame_data: FrameData) -> None:
+    def perform(self, frame_data: FrameData | None) -> None:
         timestamp = datetime.fromtimestamp(frame_data.timestamp / 1000.0)
         print(f"At {timestamp}, received: {frame_data.body_kinematics.joint_centers[self._joint_center]}")
 

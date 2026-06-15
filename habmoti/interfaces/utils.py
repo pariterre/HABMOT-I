@@ -1,4 +1,5 @@
 from ..analyzers.analyzer import Analyzer, AnalyzerList
+from ..analyzers.movement_analyzers.hop_analyzer import HopAnalyzer
 from ..analyzers.viewers.to_matplotlib_analyzer import ToMatplotlibAnalyzer
 from ..analyzers.viewers.to_ogl_analyzer import ToOglAnalyzer
 from ..analyzers.writers.to_console_analyzer import ToConsoleAnalyzer
@@ -19,6 +20,7 @@ _analyzer_factories = {
     "to_csv": ToCsvAnalyzer,
     "to_ogl": ToOglAnalyzer,
     "to_matplotlib": ToMatplotlibAnalyzer,
+    "hop": HopAnalyzer,
 }
 
 

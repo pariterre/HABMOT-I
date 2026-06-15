@@ -33,6 +33,10 @@ class Habmoti:
     def is_initialized(self) -> bool:
         return self._is_initialized
 
+    @property
+    def is_trial_started(self) -> bool:
+        return self._is_trial_started
+
     def initialize(self) -> None:
         """
         Initialize the pipeline threads.
@@ -136,7 +140,7 @@ class Habmoti:
                 "WARNING: Starting the device inside a sub-thread may cause issues. "
                 "When this modification is tested and confirmed with a real device, you can remove this warning."
             )
-            self._device.start()
+            self._device.start(habmoti=self)
             self._wait_for_analyzer()
             self._capture_loop()
         except Exception as e:
@@ -155,7 +159,7 @@ class Habmoti:
         """
         while not self._analyzer_ready_event.is_set():
             # If Haboti is stopped while waiting for initialization, stop waiting
-            if not self._capture_has_ended_event.is_set() and not self._stop_request_event.is_set():
+            if self._capture_has_ended_event.is_set() and self._stop_request_event.is_set():
                 return
             time.sleep(0.1)
 
@@ -211,8 +215,6 @@ class Habmoti:
                 data: dict = self._to_analyzer_queue.get(timeout=0.5)
                 frame_data: FrameData | None = data.get("frame_data")
                 analyses: dict = data.get("analyses", {})
-                if frame_data is None:
-                    continue
                 self._analyzer.perform(frame_data)
 
             except queue.Empty:

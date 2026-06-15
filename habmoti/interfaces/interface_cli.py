@@ -3,6 +3,7 @@ from pathlib import Path
 
 from .utils import habmoti_from_dict
 from ..analyzers.analyzer import AnalyzerList
+from ..analyzers.movement_analyzers.hop_analyzer import HopAnalyzer
 from ..analyzers.writers.to_console_analyzer import ToConsoleAnalyzer
 from ..analyzers.writers.to_csv_analyzer import ToCsvAnalyzer
 from ..analyzers.viewers.to_matplotlib_analyzer import ToMatplotlibAnalyzer
@@ -35,6 +36,7 @@ def navigable_menu(func):
 class InterfaceCli:
     def __init__(self):
         self._habmoti = Habmoti(analyzer=AnalyzerList())
+        self._auto_initialize = False
 
     def exec(self) -> None:
         print("Welcome to the HABMOT-I CLI!")
@@ -66,6 +68,20 @@ class InterfaceCli:
                 break
             else:
                 print(f"  Unknown command: {commands[0]}. Type 'help' for a list of commands.")
+        
+        self._handle_controller_command(["terminate"], previous_commands=["controller"])
+
+    def exec_from_config(self, config_filepath: str):
+        is_success = self._handle_load_command([f"filepath={config_filepath}"])
+        if not is_success:
+            # The error message is already printed in _handle_load_command, so we just exit silently here
+            return
+        if self._habmoti.device is None:
+            raise ValueError("No device configured. Please configure a device in the configuration file, or use 'exec' to start the CLI.")
+        
+        self._handle_controller_command(["initialize"], previous_commands=["controller"])
+        self._habmoti.exec()
+
 
     def _handle_help_command(self):
         print("""  Available commands:
@@ -82,7 +98,13 @@ class InterfaceCli:
     def _handle_quit_command(self):
         print("Exiting the HABMOT-I CLI. Goodbye!")
 
-    def _handle_load_command(self, parameters: list[str]):
+    def _handle_load_command(self, parameters: list[str]) -> bool:
+        """
+        Load a configuration from a JSON file. This will remove the current device and analyzer.
+        If a configuration file path is provided in the parameters, it will be used directly. Otherwise, the user will be prompted to enter a file path.
+
+        Returns True if the configuration was loaded successfully, False otherwise.
+        """
         analyzers = self._habmoti.analyzer
         if analyzers is not None and not isinstance(analyzers, AnalyzerList):
             raise ValueError(
@@ -117,8 +139,10 @@ class InterfaceCli:
             habmoti_from_dict(self._habmoti, config)
 
             print(f"  Configuration loaded from {filepath}.")
+            return True
         except Exception as e:
             print(f"  Failed to load configuration: {e}")
+            return False
 
     @navigable_menu
     def _handle_device_command(self, commands: list[str], previous_commands: list[str]) -> bool:
@@ -318,8 +342,11 @@ class InterfaceCli:
             elif commands[0] == "csv":
                 self._handle_add_csv_command(commands[1:])
                 ignore_has_navigated = True
+            elif commands[0] == "hop":
+                self._handle_add_hop_command()
+                ignore_has_navigated = True
             else:
-                print(f"  Unknown viewer analyzer: {commands[0]}. Use the 'list' subcommand for available analyzers.")
+                print(f"  Unknown analyzer: {commands[0]}. Use the 'list' subcommand for available analyzers.")
         except Exception as e:
             print(f"  Failed to add analyzer: {e}")
 
@@ -427,6 +454,10 @@ class InterfaceCli:
             ToCsvAnalyzer(filepath=csv_path, auto_increment=auto_increment, allow_overwrite=allow_overwrite)
         )
         print(f"  Added a CSV writer.")
+
+    def _handle_add_hop_command(self):
+        self._habmoti.analyzer.append(HopAnalyzer())
+        print(f"  Added a Hop analyzer.")
 
     def _handle_controller_command(self, command: list[str], previous_commands: list[str]) -> bool:
         if self._habmoti.device is None:

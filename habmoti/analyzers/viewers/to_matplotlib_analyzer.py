@@ -263,20 +263,23 @@ class ToMatplotlibAnalyzer(DataViewerAnalyzer):
             time.sleep(0.01)
 
     @override
-    def perform(self, frame_data: FrameData) -> None:
+    def perform(self, frame_data: FrameData | None) -> None:
         if not self._is_started:
             return
 
         if self._viewer_stop_event is not None and self._viewer_stop_event.is_set():
             if not self._stop_notified and self._habmoti is not None:
                 self._stop_notified = True
-                self._habmoti.stop(blocking=False)
+                self._habmoti.terminate()
             return
 
         if self._viewer_process is not None and not self._viewer_process.is_alive():
             if not self._stop_notified and self._habmoti is not None:
                 self._stop_notified = True
-                self._habmoti.stop(blocking=False)
+                self._habmoti.terminate()
+            return
+        
+        if frame_data is None:
             return
 
         body_kinematics = frame_data.body_kinematics

@@ -93,7 +93,10 @@ class ToCsvAnalyzer(DataWriterAnalyzer):
                 raise e
 
     @override
-    def perform(self, frame_data: FrameData) -> None:
+    def perform(self, frame_data: FrameData | None) -> None:
+        if frame_data is None:
+            return 
+        
         with self._writing_mutex:
             if not self.is_writing:
                 return

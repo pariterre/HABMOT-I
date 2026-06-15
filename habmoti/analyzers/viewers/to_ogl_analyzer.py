@@ -104,8 +104,8 @@ class ToOglAnalyzer(DataViewerAnalyzer):
         self._is_started = True
 
     @override
-    def perform(self, frame_data: FrameData) -> None:
-        if self._is_started:
+    def perform(self, frame_data: FrameData | None) -> None:
+        if self._is_started and frame_data is not None:
             self._update_bodies(frame_data.body_kinematics)
         _OGL.glut.glutMainLoopEvent()
 

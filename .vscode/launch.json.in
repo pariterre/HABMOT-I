@@ -24,5 +24,18 @@
             },
             "cwd": "${workspaceFolder}/runner/"
         },
+        {
+            "name": "Main CLI",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/runner/main_cli.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}",
+                "HABMOTI_CONFIG_FILE": "<PATH_TO_CONFIG_FILE>", // Path to the configuration file
+            },
+            "cwd": "${workspaceFolder}/runner/"
+        },
     ]
 }
