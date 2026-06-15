@@ -16,7 +16,7 @@
                 "HABMOTI_DEVICE_TYPE": "<DEVICE_TO_USE>", // Options: "zed", "zed_mock", "csv_reader"
                 "HABMOTI_ZED_PARAMETERS": "{\"configuration_filepath\": \"<PATH_TO_CONFIG_FILE>\"}", // Ignored if HABMOTI_DEVICE_TYPE =/= "zed"
                 "HABMOTI_ZED_MOCK_PARAMETERS": "{\"target_fps\": <FPS_TO_SIMULATE_AS_INT>, \"max_fps_lag_ms\": <VARABILITY_TO_SIMULATE_AS_INT>}", // Ignored if HABMOTI_DEVICE_TYPE =/= "zed_mock"
-                "HABMOTI_CSV_READER_PARAMETERS": "{\"filepath\": \"<PATH_TO_INPUT_FILE>\", \"frame_per_second\": null}", // Ignored if HABMOTI_DEVICE_TYPE =/= "csv_reader"
+                "HABMOTI_CSV_READER_PARAMETERS": "{\"filepath\": \"<PATH_TO_INPUT_FILE>\", \"frame_per_second\": null, \"terminate_on_end\": true}", // Ignored if HABMOTI_DEVICE_TYPE =/= "csv_reader"
                 "HABMOTI_ANALYZERS": "[\"<LIST_OF_ANALYZERS>\", \"<COMMA_SEPARATED>\"]", // Options: "to_console", "to_csv", "to_ogl", "to_matplotlib"
                 "HABMOTI_TO_CONSOLE_ANALYZER_PARAMETERS": "{\"joint_center\": \"<DOF_TO_PRINT>\"}", // Options depends on the model used (e.g. of valid value: NOSE). Ignored if "to_console" not in "HABMOTI_ANALYZERS"
                 "HABMOTI_TO_CSV_ANALYZER_PARAMETERS": "{\"filepath\": \"PATH_TO_OUTPUT_FILE\"}", // Ignored if "to_csv" not in "HABMOTI_ANALYZERS"

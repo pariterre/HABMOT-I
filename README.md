@@ -53,6 +53,7 @@ This variable defines the configuration of the CSV reader device and consists of
     - A negative value targets to replicate the original frame rate
     - Zero (0) is on a frame by frame basis (i.e. pressing enter between each frame)
     - A positive value is a fixed value
+- `terminate_on_end`: Whether to terminate the main loop when the end of the file is reached as a boolean. If set to `true`, the device will send a terminate signal to the main loop. If set to `false` or omitted, the device send a stop_trial signal to the main loop.
 
 ### HABMOTI_ANALYZERS
 This variable defines the analyzers to use and consists of a list of comma-separated strings surrounded by square brackets. Each string must be one of the following values:
@@ -161,7 +162,8 @@ The parameters for the `csv_reader` device are as follows:
 ```json
 {
     "filepath": "<PATH_TO_CSV_FILE>",
-    "frame_per_second": <FRAME_PER_SECOND>
+    "frame_per_second": <FRAME_PER_SECOND>,
+    "terminate_on_end": <TERMINATE_ON_END>
 }
 ```
 where `<FRAME_PER_SECOND>` can be:
@@ -169,6 +171,7 @@ where `<FRAME_PER_SECOND>` can be:
 - A negative value to replicate the original frame rate
 - Zero (0) for a frame by frame basis (i.e. pressing enter between each frame)
 - A positive value for a fixed value
+where `<TERMINATE_ON_END>` is a boolean that indicates whether to terminate the main loop when the end of the file is reached. If set to `true`, the device will send a terminate signal to the main loop. If set to `false` or omitted, the device send a stop_trial signal to the main loop.
 
 #### Analyzer to_console parameters
 The parameters for the `to_console` analyzer are as follows:

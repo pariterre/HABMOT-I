@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 
 class CsvReaderDevice(Device):
-    def __init__(self, filepath: Path, frame_per_second: int | None = None):
+    def __init__(self, filepath: Path, frame_per_second: int | None = None, terminate_on_end: bool = False):
         """
         Reading a file and streaming the data as if it was a device
 
@@ -30,6 +30,9 @@ class CsvReaderDevice(Device):
                 - A negative value targets to replicate the original frame rate
                 - Zero (0) is on a frame by frame basis (i.e. pressing enter between each frame)
                 - A positive value is a fixed value
+            terminate_on_end: Whether to stop the pipeline when the end of the file is reached, 
+                If True, a terminate signal will be sent to the analyzers when the end of the file is reached.
+                If False, a stop_trial signal will be sent to the analyzers when the end of the file is reached.
         """
 
         self._filepath = Path(filepath)
@@ -40,6 +43,7 @@ class CsvReaderDevice(Device):
         self._habmoti: Habmoti | None = None
 
         self._frame_per_second = frame_per_second
+        self._terminate_on_end = terminate_on_end
         try:
             self._parse_header()
         except Exception as e:
@@ -67,7 +71,10 @@ class CsvReaderDevice(Device):
         if self._current_index < 0 and not self._habmoti.is_trial_started:
             self._habmoti.start_trial()
         elif self._current_index >= self._data.shape[0] and self._habmoti.is_trial_started:
-            self._habmoti.stop_trial()
+            if self._terminate_on_end:
+                self._habmoti.terminate()
+            else:
+                self._habmoti.stop_trial()
 
         self._current_index += 1
         if self._current_index >= self._data.shape[0]:
@@ -84,7 +91,7 @@ class CsvReaderDevice(Device):
             self._delay_frame(delta_time=1 / self._frame_per_second)
 
         return FrameData(
-            timestamp=time.time() * 1000,  #  int(self._data[self._current_index, 0]),
+            timestamp=int(self._data[self._current_index, 0]),
             body_kinematics=BodyKinematics(
                 body_model=self.body_model,
                 values=self._data[self._current_index, 1:].reshape(-1, 3),
