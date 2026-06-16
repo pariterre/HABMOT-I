@@ -3,13 +3,16 @@
         "name": "csv_reader",
         "parameters": {
             "filepath": "<PATH_TO_CSV_FILE>",
-            "frame_per_second": < 0 (frame by frame) | -1 (original frame rate) | None (as fast as possible) | [positive integer] (custom frame rate) >
+            "frame_per_second": < 0 (frame by frame) | -1 (original frame rate) | null (as fast as possible) | [positive integer] (custom frame rate) >,
             "terminate_on_end": < true | [false] >
         }
     },
     "analyzers": [
         {
-            "name": "to_matplotlib"
+            "name": "to_matplotlib",
+            "parameters": {
+                "show_body_coordinate_systems": < true | [false] >
+            }
         },
         {
             "name": "to_ogl"

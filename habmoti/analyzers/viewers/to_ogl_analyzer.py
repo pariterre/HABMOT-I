@@ -7,9 +7,10 @@ import numpy as np
 from numpy.typing import NDArray
 
 from .data_viewer_analyzer import DataViewerAnalyzer
+from ...data.frame_data import FrameData
 
 if TYPE_CHECKING:
-    from ..analyzer import Habmoti, FrameData
+    from ..analyzer import Habmoti
     from ...data.body_kinematics import BodyKinematics, BodyModel
 
 _M_PI = 3.1415926

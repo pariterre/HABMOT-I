@@ -1,9 +1,14 @@
-from dataclasses import dataclass
 from enum import IntEnum
 from typing import Generic, TypeVar, override
 
 import numpy as np
 from numpy.typing import NDArray
+
+from ..utils.maths import create_system_of_axes, AxisName
+
+type point_type = list[int]
+type axis_type = tuple[point_type, point_type]
+type coordinate_system_type = tuple[axis_type, tuple[axis_type, AxisName], tuple[axis_type, AxisName], AxisName]
 
 
 class BodyModel(IntEnum):
@@ -16,7 +21,11 @@ class BodyModel(IntEnum):
         raise NotImplementedError("This method should be implemented in subclasses of BodyModel")
 
     @staticmethod
-    def segment_links(self) -> list[tuple["BodyModel", "BodyModel"]]:
+    def segment_links() -> list[tuple["BodyModel", "BodyModel"]]:
+        raise NotImplementedError("This method should be implemented in subclasses of BodyModel")
+
+    @staticmethod
+    def body_coordinate_systems_indices() -> coordinate_system_type:
         raise NotImplementedError("This method should be implemented in subclasses of BodyModel")
 
 
@@ -63,43 +72,92 @@ class BodyModel18Joints(BodyModel):
             (BodyModel18Joints.LEFT_KNEE, BodyModel18Joints.LEFT_ANKLE),
         ]
 
+    @staticmethod
+    def body_coordinate_systems_indices() -> coordinate_system_type:
+        origin = [BodyModel18Joints.NECK, BodyModel18Joints.RIGHT_HIP, BodyModel18Joints.LEFT_HIP]
+        first_axis = [[BodyModel18Joints.RIGHT_HIP], [BodyModel18Joints.LEFT_HIP]]
+        second_axis = [origin, [BodyModel18Joints.NECK]]
+        return [origin, [first_axis, AxisName.X], [second_axis, AxisName.Y], AxisName.X]
+
 
 BodyModelType = TypeVar("BodyModelType", bound=BodyModel)
 
 
-@dataclass(frozen=True)
 class BodyKinematics(Generic[BodyModelType]):
-    body_model: type[BodyModelType]
-    values: NDArray[np.float64]
 
-    def __post_init__(self) -> None:
-        if self.values.ndim != 2 or self.values.shape[1] != 3:
+    def __init__(self, body_model: type[BodyModelType], values: NDArray[np.float64]) -> None:
+        self._body_model = body_model
+        self._values = values
+
+        if self._values.ndim != 2 or self._values.shape[1] != 3:
             raise ValueError("Expected shape (n_joints, 3)")
 
     @property
+    def body_model(self) -> type[BodyModelType]:
+        return self._body_model
+
+    def values(self) -> NDArray[np.float64]:
+        return self._values
+
+    @property
     def joint_centers(self) -> NDArray[np.float64]:
-        return self.values
+        return self._values
 
     @property
     def body_list(self) -> list[NDArray[np.float64]]:
-        return [self.values]
+        return [self._values]
+
+    @property
+    def body_coordinate_system(self) -> list[coordinate_system_type]:
+        origin_indices, first_axis, second_axis, keep_axis = self._body_model.body_coordinate_systems_indices()
+        first_axis_indices, first_axis_name = first_axis
+        second_axis_indices, second_axis_name = second_axis
+
+        origin = np.mean(self._values[origin_indices, :], axis=0)
+        first_axis_start = np.mean(self._values[first_axis_indices[0], :], axis=0)
+        first_axis_end = np.mean(self._values[first_axis_indices[1], :], axis=0)
+        second_axis_start = np.mean(self._values[second_axis_indices[0], :], axis=0)
+        second_axis_end = np.mean(self._values[second_axis_indices[1], :], axis=0)
+        axis_to_keep = keep_axis
+
+        return [
+            create_system_of_axes(
+                origin=origin,
+                first_axis=first_axis_end - first_axis_start,
+                first_axis_name=first_axis_name,
+                second_axis=second_axis_end - second_axis_start,
+                second_axis_name=second_axis_name,
+                keep_axis=axis_to_keep,
+            )
+        ]
 
 
-@dataclass(frozen=True)
 class MultiBodyKinematics(BodyKinematics[BodyModelType]):
-    body_model: type[BodyModelType]
-    values: list[NDArray[np.float64]]
 
-    def __post_init__(self) -> None:
-        for value in self.values:
+    def __init__(self, body_model: type[BodyModelType], values: list[NDArray[np.float64]]) -> None:
+        self._body_model = body_model
+        self._values = values
+
+        for value in self._values:
             if value.ndim != 2 or value.shape[1] != 3:
                 raise ValueError("Expected shape (n_joints, 3)")
 
     @property
+    def body_model(self) -> type[BodyModelType]:
+        return self._body_model
+
+    def values(self) -> list[NDArray[np.float64]]:
+        return self._values
+
+    @property
     def joint_centers(self) -> NDArray[np.float64]:
-        return np.mean(self.values, axis=0)
+        return np.mean(self._values, axis=0)
 
     @override
     @property
     def body_list(self) -> list[NDArray[np.float64]]:
-        return self.values
+        return self._values
+
+    @property
+    def body_coordinate_system(self) -> list[coordinate_system_type]:
+        raise NotImplementedError("Body coordinate systems are not implemented for MultiBodyKinematics yet")

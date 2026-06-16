@@ -13,7 +13,10 @@
             }
         }, 
         {
-            "name": "to_matplotlib"
+            "name": "to_matplotlib",
+            "parameters": {
+                "show_body_coordinate_systems": < true | [false] >
+            }
         },
         {
             "name": "to_ogl"

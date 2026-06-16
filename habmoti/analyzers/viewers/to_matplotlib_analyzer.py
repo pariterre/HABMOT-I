@@ -76,7 +76,11 @@ def _matplotlib_viewer_process(data_queue, is_ready_event, stop_event) -> None:
         plt.close(fig)
 
 
-def _scene_matches(scene: _SceneArtists, bodies: list[np.ndarray], segment_links: list[tuple[int, int]]) -> bool:
+def _scene_matches(
+    scene: _SceneArtists,
+    bodies: list[np.ndarray],
+    segment_links: list[tuple[int, int]],
+) -> bool:
     if len(scene.bodies) != len(bodies):
         return False
     if scene.segment_links != segment_links:
@@ -91,7 +95,11 @@ def _scene_matches(scene: _SceneArtists, bodies: list[np.ndarray], segment_links
     return True
 
 
-def _build_scene(ax, bodies: list[np.ndarray], segment_links: list[tuple[int, int]]) -> _SceneArtists:
+def _build_scene(
+    ax,
+    bodies: list[np.ndarray],
+    segment_links: list[tuple[int, int]],
+) -> _SceneArtists:
     ax.clear()
 
     body_artists: list[_BodyArtists] = []
@@ -221,13 +229,14 @@ def _compute_equal_limits(
 class ToMatplotlibAnalyzer(DataViewerAnalyzer):
     """Render body kinematics in a live 3D Matplotlib view."""
 
-    def __init__(self):
+    def __init__(self, show_body_coordinate_systems: bool = False) -> None:
         self._is_started = False
         self._habmoti: Habmoti | None = None
         self._viewer_process: Process | None = None
         self._viewer_stop_event = None
         self._viewer_queue: Queue | None = None
         self._stop_notified = False
+        self._show_body_coordinate_systems = show_body_coordinate_systems
 
     @property
     @override
@@ -278,7 +287,7 @@ class ToMatplotlibAnalyzer(DataViewerAnalyzer):
                 self._stop_notified = True
                 self._habmoti.terminate()
             return
-        
+
         if frame_data is None:
             return
 
@@ -287,6 +296,22 @@ class ToMatplotlibAnalyzer(DataViewerAnalyzer):
             (int(joint_a.value), int(joint_b.value)) for joint_a, joint_b in body_kinematics.body_model.segment_links()
         ]
         bodies = [np.asarray(joints, dtype=np.float64).copy() for joints in body_kinematics.body_list]
+
+        if self._show_body_coordinate_systems:
+            joint_coordinate_systems = frame_data.body_kinematics.body_coordinate_system
+            for body_index, jcs in enumerate(joint_coordinate_systems):
+                origin = jcs[:3, 3]
+                axes = jcs[:3, :3] * 0.1
+                translated_axes = axes + np.repeat(origin[:, None], 3, axis=1)
+                body_count = bodies[body_index].shape[0]
+                bodies[body_index] = np.concatenate((bodies[body_index], translated_axes.T, origin[None, :]), axis=0)
+                segment_links.extend(
+                    [
+                        (body_count + 3, body_count + 0),
+                        (body_count + 3, body_count + 1),
+                        (body_count + 3, body_count + 2),
+                    ]
+                )
 
         if self._viewer_queue is None:
             return

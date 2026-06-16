@@ -1,9 +1,10 @@
 from typing import override, TYPE_CHECKING
 
 from .data_movement_analyzer import DataMovementAnalyzer
+from ...data.frame_data import FrameData
 
 if TYPE_CHECKING:
-    from ..analyzer import Habmoti, FrameData
+    from ..analyzer import Habmoti
 
 
 class HorizontalJumpAnalyzer(DataMovementAnalyzer):
@@ -35,7 +36,7 @@ class HorizontalJumpAnalyzer(DataMovementAnalyzer):
         if self._is_analyzing:
             print("Analyzing horizontal jump frame")
         pass
-        
+
     @override
     def stop_trial(self) -> None:
         self._is_analyzing = False
