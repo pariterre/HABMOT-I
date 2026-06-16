@@ -16,17 +16,27 @@ def compute_jump_indices(body_model: BodyModel, frames: list[FrameData]) -> tupl
     mean_feet_height = np.mean(data[:, [left_foot_index, right_foot_index], 1], axis=1)
     mid_jump_indices, _ = find_peaks(mean_feet_height, height=0.1)
 
-    # Find the valleys in between the first and last peaks of max_peaks to determine the landings/take-offs
-    min_peaks, _ = find_peaks(-mean_feet_height, height=-0.1)
-    min_peaks = [peak for peak in min_peaks if peak > mid_jump_indices[0] and peak < mid_jump_indices[-1]]
-    start_jump_indices = min_peaks[:-1]
-    end_jump_indices = min_peaks[1:]
+    # Compute the velocity of the feet
+    mean_foot_velocity = np.gradient(mean_feet_height)
 
-    # Remove back the mid jumps which are not between a start and end jump
-    mid_jump_indices = [
-        mid
-        for mid in mid_jump_indices
-        if any(start < mid < end for start, end in zip(start_jump_indices, end_jump_indices))
-    ]
+    # Find the first time the derivative become positive before (start) and after (end) of each mid jump indices
+    start_jump_indices = []
+    end_jump_indices = []
+    for mid in mid_jump_indices:
+        start = mid - 1
+        while start > 0 and mean_foot_velocity[start] > 0:
+            start -= 1
+        start_jump_indices.append(start)
 
-    return [[start, mid, end] for start, mid, end in zip(start_jump_indices, mid_jump_indices, end_jump_indices)]
+        end = mid + 1
+        while end < len(mean_foot_velocity) - 1 and mean_foot_velocity[end] < 0:
+            end += 1
+        end_jump_indices.append(end)
+
+    # Make sure all jumps has a start, mid and end, and these are not edges of the recording
+    valid_jump_indices = []
+    for start, mid, end in zip(start_jump_indices, mid_jump_indices, end_jump_indices):
+        if start < mid < end and start > 0 and end < len(frames) - 1:
+            valid_jump_indices.append((start, mid, end))
+
+    return valid_jump_indices

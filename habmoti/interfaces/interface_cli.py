@@ -5,6 +5,7 @@ from pathlib import Path
 from .utils import habmoti_from_dict
 from ..analyzers.analyzer import AnalyzerList
 from ..analyzers.movement_analyzers.hop_analyzer import HopAnalyzer
+from ..analyzers.movement_analyzers.horizontal_jump_analyzer import HorizontalJumpAnalyzer
 from ..analyzers.writers.to_console_analyzer import ToConsoleAnalyzer
 from ..analyzers.writers.to_csv_analyzer import ToCsvAnalyzer
 from ..analyzers.viewers.to_matplotlib_analyzer import ToMatplotlibAnalyzer
@@ -349,6 +350,9 @@ class InterfaceCli:
             elif commands[0] == "hop":
                 self._handle_add_hop_command()
                 ignore_has_navigated = True
+            elif commands[0] == "horizontal_jump":
+                self._handle_add_horizontal_jump_command()
+                ignore_has_navigated = True
             else:
                 print(f"  Unknown analyzer: {commands[0]}. Use the 'list' subcommand for available analyzers.")
         except Exception as e:
@@ -462,6 +466,10 @@ class InterfaceCli:
     def _handle_add_hop_command(self):
         self._habmoti.analyzer.append(HopAnalyzer())
         print(f"  Added a Hop analyzer.")
+
+    def _handle_add_horizontal_jump_command(self):
+        self._habmoti.analyzer.append(HorizontalJumpAnalyzer())
+        print(f"  Added a Horizontal Jump analyzer.")
 
     def _handle_controller_command(self, command: list[str], previous_commands: list[str]) -> bool:
         if self._habmoti.device is None:

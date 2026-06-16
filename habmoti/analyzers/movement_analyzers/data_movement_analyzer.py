@@ -76,6 +76,8 @@ class DataMovementAnalyzer(Analyzer):
         self._data_centered = None
 
     def _show_data(self, *args, blocking: bool = False, **kwargs) -> None:
+        from matplotlib import pyplot as plt
+
         viewer_global = ToMatplotlibAnalyzer(show_body_coordinate_systems=True)
         viewer_global.initialize(self._habmoti)
         viewer_global.start_trial()
@@ -84,6 +86,8 @@ class DataMovementAnalyzer(Analyzer):
         viewer_local.initialize(self._habmoti)
         viewer_local.start_trial()
 
+        t0 = self._data_centered[0].timestamp if self._data_centered else 0
+        t = np.array([data.timestamp - t0 for data in self._data_centered]) / 1000.0
         index = 0
         frames_in_global = self._data
         frames_in_local = self._data_centered
@@ -93,6 +97,8 @@ class DataMovementAnalyzer(Analyzer):
             self._update_extra_show_data(index, *args, **kwargs)
             if blocking:
                 input(f"Showing frame {index}. Press Enter to continue to the next frame...")
+            else:
+                plt.pause((t[index] - t[index - 1]) if index > 0 else 1.0)
             index = (index + 1) % len(frames_in_global)
 
     def _update_extra_show_data(self, index: int, *args, **kwargs) -> None:

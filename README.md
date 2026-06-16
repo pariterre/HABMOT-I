@@ -136,7 +136,9 @@ Where:
     - `to_console` ([parameters](#analyzer-to_console-parameters))
     - `to_csv` ([parameters](#analyzer-to_csv-parameters))
     - `to_ogl` (no parameters)
-    - `to_matplotlib` (no parameters)
+    - `to_matplotlib` ([parameters](#analyzer-matplotlib-parameters))
+    - `hop` (no parameters)
+    - `horizontal_jump` (no parameters)
 
 #### Device Zed parameters
 The parameters for the `zed` device are as follows:
@@ -196,3 +198,12 @@ where `<AUTO_INCREMENT>` is a boolean that indicates whether to automatically in
 
 `<ALLOW_OVERWRITE>` is a boolean that indicates whether to allow overwriting the file if it already exists. If set to `true`, the file will be overwritten if it already exists. If set to `false` or omitted, the file will not be overwritten if it already exists and an error will be raised. Please note that if `auto_increment` is set to `true`, the `allow_overwrite` parameter will be ignored as the file will never be overwritten.
 
+#### Analyzer matplotlib parameters
+
+The parameters for the `to_matplotlib` analyzer are as follows:
+```json
+{
+    "show_body_coordinate_systems": "<true_or_false>"
+}
+```
+where `<true_or_false>` is a boolean that indicates whether to show the body coordinate systems in the Matplotlib window.

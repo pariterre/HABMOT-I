@@ -6,7 +6,6 @@ import numpy as np
 
 from .utils.jump_utils import JumpIndices, compute_jump_indices
 from .data_movement_analyzer import DataMovementAnalyzer
-from ...data.frame_data import FrameData
 
 _logger = logging.getLogger(__name__)
 
@@ -59,8 +58,9 @@ class HopAnalyzer(DataMovementAnalyzer):
         )
         _logger.info(f"Non-hopping leg remains behind: {self._criteria.non_hopping_leg_remains_behind}")
         _logger.info("#####################")
+
         if show_debug_graphs:
-            self._show_data(blocking=True, jump_indices=jump_indices)
+            self._show_data(blocking=False, jump_indices=jump_indices)
 
     @override
     def dispose(self) -> None:
