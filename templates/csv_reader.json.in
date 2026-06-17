@@ -15,10 +15,16 @@
             }
         },
         {
-            "name": "horizontal_jump"
+            "name": "horizontal_jump",
+            "parameters": {
+                "show_debug_graphs": < true | [false] >
+            }
         },
         {
-            "name": "hop"
+            "name": "hop",
+            "parameters": {
+                "show_debug_graphs": < true | [false] >
+            }
         },
     ]
 }

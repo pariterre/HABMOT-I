@@ -137,7 +137,7 @@ Where:
     - `to_csv` ([parameters](#analyzer-to_csv-parameters))
     - `to_ogl` (no parameters)
     - `to_matplotlib` ([parameters](#analyzer-matplotlib-parameters))
-    - `hop` (no parameters)
+    - `hop` ([parameters](#analyzer-hop-parameters))
     - `horizontal_jump` (no parameters)
 
 #### Device Zed parameters
@@ -207,3 +207,23 @@ The parameters for the `to_matplotlib` analyzer are as follows:
 }
 ```
 where `<true_or_false>` is a boolean that indicates whether to show the body coordinate systems in the Matplotlib window.
+
+#### Analyzer hop parameters
+
+The parameters for the `hop` analyzer are as follows:
+```json
+{
+    "show_debug_graphs": "<true_or_false>"
+}
+```
+where `<true_or_false>` is a boolean that indicates whether to show the debug graphs in the Matplotlib window.
+
+#### Analyzer horizontal_jump parameters
+
+The parameters for the `horizontal_jump` analyzer are as follows:
+```json
+{
+    "show_debug_graphs": "<true_or_false>"
+}
+```
+where `<true_or_false>` is a boolean that indicates whether to show the debug graphs in the Matplotlib window.

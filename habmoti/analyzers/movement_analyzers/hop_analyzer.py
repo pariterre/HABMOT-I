@@ -3,7 +3,9 @@ import logging
 from typing import override
 
 import numpy as np
+import numpy.typing as npt
 
+from .utils.body_model_utils import segment_angle
 from .utils.jump_utils import JumpIndices, compute_jump_indices
 from .data_movement_analyzer import DataMovementAnalyzer, Axes
 
@@ -26,9 +28,10 @@ Hop analysis results:
 
 
 class HopAnalyzer(DataMovementAnalyzer):
-    def __init__(self):
+    def __init__(self, show_debug_graphs: bool = False) -> None:
         super().__init__()
         self._criteria: HabmotCriteriaHop | None = None
+        self._show_debug_graphs = show_debug_graphs
 
     @property
     @override
@@ -43,10 +46,10 @@ class HopAnalyzer(DataMovementAnalyzer):
     @override
     def stop_trial(self) -> None:
         super().stop_trial()
-        self._perform_post_trial_analysis(show_debug_graphs=True)
+        self._perform_post_trial_analysis()
 
     @override
-    def _perform_post_trial_analysis(self, show_debug_graphs: bool = False) -> None:
+    def _perform_post_trial_analysis(self) -> None:
         # Find the peaks in the mean feet y position to find the mid-jump frames
         jump_indices = compute_jump_indices(body_model=self._habmoti.device.body_model, frames=self._data_centered)
         prefered_ground_foot = self._compute_prefered_ground_foot(jump_indices)
@@ -64,7 +67,7 @@ class HopAnalyzer(DataMovementAnalyzer):
         # Print the results to the console
         _logger.info(f"\n{self._criteria}")
 
-        if show_debug_graphs:
+        if self._show_debug_graphs:
             self._show_data(blocking=False, jump_indices=jump_indices)
 
     @override
@@ -140,17 +143,35 @@ class HopAnalyzer(DataMovementAnalyzer):
         jump_indices: tuple[JumpIndices],
     ) -> bool:
         joint_centers = np.array([data.body_kinematics.joint_centers for data in self._data_centered])
+        start_jump = [jump[0] for jump in jump_indices]
+        mid_jump = [jump[1] for jump in jump_indices]
+        end_jump = [jump[2] for jump in jump_indices]
+        frontward = Axes.FRONTAL.value
 
         index_of = lambda name: self._habmoti.device.body_model.from_name(name)
 
         left_arm = joint_centers[:, [index_of("left_shoulder"), index_of("left_elbow"), index_of("left_wrist")], :]
         right_arm = joint_centers[:, [index_of("right_shoulder"), index_of("right_elbow"), index_of("right_wrist")], :]
+        shoulder = 0
+        elbow = 1
+        wrist = 2
 
-        axis_index = Axes.FRONTAL.value
-        start_jump_indices = [jump[0] for jump in jump_indices]
-        mid_jump_indices = [jump[1] for jump in jump_indices]
-        left_elbow_forward = left_arm[start_jump_indices, 1, axis_index] < left_arm[mid_jump_indices, 1, axis_index]
-        right_elbow_forward = right_arm[start_jump_indices, 1, axis_index] < right_arm[mid_jump_indices, 1, axis_index]
+        def arm_is_moving_forward(arm_data: np.ndarray) -> npt.NDArray[np.bool_]:
+            return arm_data[start_jump, elbow, frontward] < arm_data[mid_jump, elbow, frontward]
+
+        def arm_is_flexed(arm_data: np.ndarray, instant: int) -> npt.NDArray[np.bool_]:
+            threshold_angle = 10 * np.pi / 180  # 10 degrees in radians
+            angles = segment_angle(arm_data[instant, :, :], pivot_index=elbow, p0_index=shoulder, p1_index=wrist)
+            return (angles > np.pi / 2 - threshold_angle) & (angles < np.pi / 2 + threshold_angle)
+
+        def arm_is_swinging_forward(arm_data: np.ndarray) -> npt.NDArray[np.bool_]:
+            return arm_is_moving_forward(arm_data) & arm_is_flexed(arm_data, mid_jump)
+
+        left_arm_is_success = arm_is_swinging_forward(left_arm)
+        right_arm_is_success = arm_is_swinging_forward(right_arm)
+        arms_are_success = left_arm_is_success & right_arm_is_success
+
+        return sum(arms_are_success) == len(jump_indices)
 
     def _show_data(self, blocking: bool, jump_indices: tuple[JumpIndices]) -> None:
         from matplotlib import pyplot as plt

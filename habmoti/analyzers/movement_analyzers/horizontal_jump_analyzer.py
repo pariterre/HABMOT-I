@@ -22,9 +22,10 @@ Horizontal jump analysis results:
 
 
 class HorizontalJumpAnalyzer(DataMovementAnalyzer):
-    def __init__(self):
+    def __init__(self, show_debug_graphs: bool = False) -> None:
         super().__init__()
         self._criteria: HabmotCriteriaHorizontalJump | None = None
+        self._show_debug_graphs = show_debug_graphs
 
     @property
     @override
@@ -39,10 +40,10 @@ class HorizontalJumpAnalyzer(DataMovementAnalyzer):
     @override
     def stop_trial(self) -> None:
         super().stop_trial()
-        self._perform_post_trial_analysis(show_debug_graphs=True)
+        self._perform_post_trial_analysis()
 
     @override
-    def _perform_post_trial_analysis(self, show_debug_graphs: bool = False) -> None:
+    def _perform_post_trial_analysis(self) -> None:
         # Find the peaks in the mean feet y position to find the mid-jump frames
         jump_indices = compute_jump_indices(body_model=self._habmoti.device.body_model, frames=self._data_centered)
 
@@ -53,7 +54,7 @@ class HorizontalJumpAnalyzer(DataMovementAnalyzer):
         # Print the results to the console
         _logger.info(f"\n{self._criteria}")
 
-        if show_debug_graphs:
+        if self._show_debug_graphs:
             self._show_data(blocking=False, jump_indices=jump_indices)
 
     @override
