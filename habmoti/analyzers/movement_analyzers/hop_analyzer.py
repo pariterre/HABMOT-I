@@ -14,7 +14,7 @@ _logger = logging.getLogger(__name__)
 
 @dataclass
 class HabmotCriteriaHop:
-    non_hopping_leg_swings_forward_perpendicular: bool = False
+    non_hopping_leg_swings_forward_in_pendular_fashion: bool = False
     non_hopping_leg_remains_behind: bool = False
     arms_flex_and_swing_forward: bool = False
     can_do_four_consecutive_jumps: bool = False
@@ -22,10 +22,10 @@ class HabmotCriteriaHop:
     def __str__(self) -> str:
         return f"""#####################
 Hop analysis results:
-  Non-hopping leg swings forward perpendicular: {self.non_hopping_leg_swings_forward_perpendicular}
-  Non-hopping leg remains behind: {self.non_hopping_leg_remains_behind}
-  Arms flex and swing forward: {self.arms_flex_and_swing_forward}
-  Can do four consecutive jumps: {self.can_do_four_consecutive_jumps}
+  1. Non-hopping leg swings forward in pendular fashion: {self.non_hopping_leg_swings_forward_in_pendular_fashion}
+  2. Non-hopping leg remains behind: {self.non_hopping_leg_remains_behind}
+  3. Arms flex and swing forward: {self.arms_flex_and_swing_forward}
+  4. Can do four consecutive jumps: {self.can_do_four_consecutive_jumps}
 #####################"""
 
 
@@ -57,8 +57,8 @@ class HopAnalyzer(DataMovementAnalyzer):
         prefered_ground_foot = self._compute_prefered_ground_foot(jump_indices)
 
         # Proceed to the analyses
-        is_success = self._compute_non_hopping_leg_swings_forward_perpendicular(jump_indices)
-        self._criteria.non_hopping_leg_swings_forward_perpendicular = is_success
+        is_success = self._compute_non_hopping_leg_swings_forward_in_pendular_fashion(jump_indices)
+        self._criteria.non_hopping_leg_swings_forward_in_pendular_fashion = is_success
 
         is_success = self._compute_non_hopping_leg_remains_behind(prefered_ground_foot, jump_indices)
         self._criteria.non_hopping_leg_remains_behind = is_success
@@ -94,35 +94,28 @@ class HopAnalyzer(DataMovementAnalyzer):
         )
         return prefered_ground_foot
 
-    def _compute_non_hopping_leg_swings_forward_perpendicular(self, jump_indices: tuple[JumpIndices]) -> bool:
+    def _compute_non_hopping_leg_swings_forward_in_pendular_fashion(self, jump_indices: tuple[JumpIndices]) -> bool:
         joint_centers = np.array([data.body_kinematics.joint_centers for data in self._data_centered])
         start_jump = [jump[0] for jump in jump_indices]
         mid_jump = [jump[1] for jump in jump_indices]
 
         index_of = lambda name: self._habmoti.device.body_model.from_name(name)
-        left_leg = joint_centers[:, [index_of("left_hip"), index_of("left_knee"), index_of("neck")], :]
-        right_leg = joint_centers[:, [index_of("right_hip"), index_of("right_knee"), index_of("neck")], :]
-        hip = 0
-        knee = 1
-        neck = 2
+        left_leg = joint_centers[:, [index_of("left_knee")], :]
+        right_leg = joint_centers[:, [index_of("right_knee")], :]
+        knee = 0
 
         def leg_is_moving_forward(leg_data: np.ndarray) -> npt.NDArray[np.bool_]:
             frontward = Axes.FRONTAL.value
             return leg_data[start_jump, knee, frontward] < leg_data[mid_jump, knee, frontward]
 
-        def leg_is_perpendicular(leg_data: np.ndarray, instant: int) -> npt.NDArray[np.bool_]:
-            threshold_angle = 10 * np.pi / 180  # 10 degrees in radians
-            angles = segment_angle(leg_data[instant, :, :], pivot_index=hip, p0_index=knee, p1_index=neck)
-            return (angles > np.pi / 2 - threshold_angle) & (angles < np.pi / 2 + threshold_angle)
+        def leg_swings_forward_in_pendular_fasion(leg_data: np.ndarray) -> npt.NDArray[np.bool_]:
+            return leg_is_moving_forward(leg_data)
 
-        def leg_swings_forward_perpendicular(leg_data: np.ndarray) -> npt.NDArray[np.bool_]:
-            return leg_is_moving_forward(leg_data) & leg_is_perpendicular(leg_data, mid_jump)
+        left_leg_is_success = leg_swings_forward_in_pendular_fasion(left_leg)
+        right_leg_is_success = leg_swings_forward_in_pendular_fasion(right_leg)
+        legs_are_success = left_leg_is_success | right_leg_is_success
 
-        left_leg_is_success = leg_swings_forward_perpendicular(left_leg)
-        right_leg_is_success = leg_swings_forward_perpendicular(right_leg)
-        non_hopping_leg_swings_forward_perpendicular = left_leg_is_success | right_leg_is_success
-
-        return sum(non_hopping_leg_swings_forward_perpendicular) == len(jump_indices)
+        return sum(legs_are_success) == len(jump_indices)
 
     def _compute_non_hopping_leg_remains_behind(
         self,
