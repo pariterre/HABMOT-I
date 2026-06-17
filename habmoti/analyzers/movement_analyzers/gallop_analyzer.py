@@ -25,7 +25,7 @@ Gallop analysis results:
   1. Arms flex and swing forward: {self.arms_flex_and_swing_forward}
   2. Lagging foot is behind on landing: {self.lagging_foot_is_behind_on_landing}
   3. Both feed come off the surface: {self.is_jumping}
-  4. Can do four consecutive gallops: {self.can_do_four_consecutive_gallops}
+  4. Can maintain a rhythmic pattern four consecutive gallops: {self.can_do_four_consecutive_gallops}
 #####################"""
 
 
@@ -62,6 +62,12 @@ class GallopAnalyzer(DataMovementAnalyzer):
 
         is_success = self._compute_lagging_foot_is_behind_on_landing(jump_indices, leading_foot)
         self._criteria.lagging_foot_is_behind_on_landing = is_success
+
+        is_success = self._compute_is_jumping(jump_indices)
+        self._criteria.is_jumping = is_success
+
+        is_success = self._compute_can_do_four_consecutive_gallops(jump_indices)
+        self._criteria.can_do_four_consecutive_gallops = is_success
 
         # Print the results to the console
         _logger.info(f"\n{self._criteria}")
@@ -130,6 +136,40 @@ class GallopAnalyzer(DataMovementAnalyzer):
             return (left_foot[end_jump] > right_foot[end_jump]).all()
         else:
             return (right_foot[end_jump] > left_foot[end_jump]).all()
+
+    def _compute_is_jumping(self, jump_indices: tuple[JumpIndices]) -> bool:
+        joint_centers = np.array([data.body_kinematics.joint_centers for data in self._data_centered])
+        mid_jump = [jump[1] for jump in jump_indices]
+        left_foot = joint_centers[:, self._habmoti.device.body_model.from_name("left_ankle"), Axes.VERTICAL.value]
+        right_foot = joint_centers[:, self._habmoti.device.body_model.from_name("right_ankle"), Axes.VERTICAL.value]
+
+        threshold = 0.1  # 10 cm
+        left_foot_is_off_ground = left_foot[mid_jump] > threshold
+        right_foot_is_off_ground = right_foot[mid_jump] > threshold
+
+        return (left_foot_is_off_ground & right_foot_is_off_ground).all()
+
+    def _compute_can_do_four_consecutive_gallops(self, jump_indices: tuple[JumpIndices]) -> bool:
+        if len(jump_indices) < 4:
+            return False
+
+        # Check if the time between each jump is consistent (not too long, not too short)
+        mid_jump_times = [self._data_centered[jump[1]].timestamp for jump in jump_indices]
+        time_differences = np.diff(mid_jump_times)
+        mean_time_diff = np.mean(time_differences)
+        time_diff_threshold = 200  # ms
+        consistent_timing = np.abs(time_differences - mean_time_diff) < time_diff_threshold
+
+        best_consecutive_count = 1
+        current_consecutive_count = 0
+        for i in range(len(consistent_timing)):
+            if consistent_timing[i]:
+                current_consecutive_count += 1
+                best_consecutive_count = max(best_consecutive_count, current_consecutive_count)
+            else:
+                current_consecutive_count = 0
+
+        return best_consecutive_count >= 4
 
     def _show_data(self, blocking: bool, jump_indices: tuple[JumpIndices]) -> None:
         from matplotlib import pyplot as plt

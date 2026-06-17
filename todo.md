@@ -8,6 +8,10 @@ Answer to the following questions:
         - Timing is never mentioned in any of the criteria. Should we use specific key instants (e.g., take-off, mid-jump) to evaluate the criteria? Or should we consider the entire movement? If so, the mean?
         - When criteria are applied accross multiple repetitions, how many successful repetitions are required to consider the task successful?
         - Should we have an algorithm to detect the quality of the movements itself?
+    - 2. Gallop
+        - 4. How do we determine the actual rythmic pattern (if is is hard to determine the movement itself)? For instance, if it fails every other times, then the rythmic pattern returns it is good...
+        - 4. So 5 jumps? 
+        - 4. What is the tolerance
     - 3. Hop
         - 1. What "pendular fashion" actually means?
         - 2. What is the anchor point to determine whether the leg is behind?
