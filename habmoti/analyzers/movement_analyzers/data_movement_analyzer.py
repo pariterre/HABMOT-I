@@ -1,3 +1,4 @@
+from enum import Enum
 import logging
 from typing import TYPE_CHECKING, override
 
@@ -13,6 +14,29 @@ if TYPE_CHECKING:
     from ..analyzer import Habmoti
 
 _logger = logging.getLogger(__name__)
+
+
+class Axes(Enum):
+    SAGITTAL = 0
+    VERTICAL = 1
+    FRONTAL = 2
+
+    @property
+    def axis(self) -> AxisName:
+        if self == Axes.SAGITTAL:
+            return AxisName.X
+        elif self == Axes.VERTICAL:
+            return AxisName.Y
+        elif self == Axes.FRONTAL:
+            return AxisName.Z
+
+    def as_array(self) -> np.ndarray:
+        if self == Axes.SAGITTAL:
+            return np.array([1.0, 0.0, 0.0])
+        elif self == Axes.VERTICAL:
+            return np.array([0.0, 1.0, 0.0])
+        elif self == Axes.FRONTAL:
+            return np.array([0.0, 0.0, 1.0])
 
 
 class DataMovementAnalyzer(Analyzer):
@@ -49,8 +73,9 @@ class DataMovementAnalyzer(Analyzer):
                 left_foot_index = self._habmoti.device.body_model.from_name("left_ankle")
                 right_foot_index = self._habmoti.device.body_model.from_name("right_ankle")
 
-                feet_height = frame_data.body_kinematics.joint_centers[[left_foot_index, right_foot_index], 1].mean()
-                if feet_height > threshold:
+                axis_index = Axes.VERTICAL.value
+                feet_height = frame_data.body_kinematics.joint_centers[[left_foot_index, right_foot_index], axis_index]
+                if feet_height.mean() > threshold:
                     self._are_data_initialized = True
                     _logger.info("Feet are above the threshold, starting to save data")
                 else:
@@ -91,10 +116,12 @@ class DataMovementAnalyzer(Analyzer):
         index = 0
         frames_in_global = self._data
         frames_in_local = self._data_centered
-        while self._update_extra_show_data(index, *args, **kwargs) or viewer_global.is_started or viewer_local.is_started:
+        while (
+            self._update_extra_show_data(index, *args, **kwargs) or viewer_global.is_started or viewer_local.is_started
+        ):
             viewer_global.perform(frame_data=frames_in_global[index])
             viewer_local.perform(frame_data=frames_in_local[index])
-            
+
             if blocking:
                 input(f"Showing frame {index}. Press Enter to continue to the next frame...")
             else:
@@ -125,13 +152,14 @@ def _frame_data_in_local_coordinate_system(frame: FrameData, keep_real_height: b
     coordinate_systems = frame.body_kinematics.body_coordinate_system[0]
     if keep_real_height:
         origin = coordinate_systems[:3, 3]
+        origin[Axes.VERTICAL.value] = 0.0
         coordinate_systems = create_system_of_axes(
-            origin=np.array((origin[0], 0.0, origin[2])),
-            first_axis=coordinate_systems[:3, 0],
-            second_axis=np.array([0.0, 1.0, 0.0]),
-            first_axis_name=AxisName.X,
-            second_axis_name=AxisName.Y,
-            keep_axis=AxisName.Y,
+            origin=origin,
+            first_axis=coordinate_systems[:3, Axes.SAGITTAL.value],
+            second_axis=Axes.VERTICAL.as_array(),
+            first_axis_name=Axes.SAGITTAL.axis,
+            second_axis_name=Axes.VERTICAL.axis,
+            keep_axis=Axes.VERTICAL.axis,
         )
 
     tranposed = (transpose_axes(coordinate_systems) @ joint_centers).T[:, :3]

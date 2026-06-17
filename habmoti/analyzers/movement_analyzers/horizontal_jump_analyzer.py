@@ -4,7 +4,7 @@ from typing import override
 
 import numpy as np
 
-from .data_movement_analyzer import DataMovementAnalyzer
+from .data_movement_analyzer import Axes, DataMovementAnalyzer
 from .utils.jump_utils import JumpIndices, compute_jump_indices
 
 _logger = logging.getLogger(__name__)
@@ -64,8 +64,9 @@ class HorizontalJumpAnalyzer(DataMovementAnalyzer):
     def _compute_feet_are_together(self, jump_indices: tuple[JumpIndices]) -> bool:
         joint_centers = np.array([data.body_kinematics.joint_centers for data in self._data_centered])
 
-        left_foot_height = joint_centers[:, self._habmoti.device.body_model.from_name("left_ankle"), 1]
-        right_foot_height = joint_centers[:, self._habmoti.device.body_model.from_name("right_ankle"), 1]
+        axis_index = Axes.VERTICAL.value
+        left_foot_height = joint_centers[:, self._habmoti.device.body_model.from_name("left_ankle"), axis_index]
+        right_foot_height = joint_centers[:, self._habmoti.device.body_model.from_name("right_ankle"), axis_index]
 
         start_index = 0
         end_index = 2
@@ -79,9 +80,10 @@ class HorizontalJumpAnalyzer(DataMovementAnalyzer):
         t0 = self._data_centered[0].timestamp if self._data_centered else 0
         t = np.array([data.timestamp - t0 for data in self._data_centered]) / 1000.0
 
+        axis_index = Axes.VERTICAL.value
         joint_centers = np.array([data.body_kinematics.joint_centers for data in self._data_centered])
-        left_foot_height = joint_centers[:, self._habmoti.device.body_model.from_name("left_ankle"), 1]
-        right_foot_height = joint_centers[:, self._habmoti.device.body_model.from_name("right_ankle"), 1]
+        left_foot_height = joint_centers[:, self._habmoti.device.body_model.from_name("left_ankle"), axis_index]
+        right_foot_height = joint_centers[:, self._habmoti.device.body_model.from_name("right_ankle"), axis_index]
         mean_feet_height = (left_foot_height + right_foot_height) / 2
 
         mid_jump_indices = [jump[1] for jump in jump_indices]

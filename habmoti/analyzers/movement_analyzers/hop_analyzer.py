@@ -5,7 +5,7 @@ from typing import override
 import numpy as np
 
 from .utils.jump_utils import JumpIndices, compute_jump_indices
-from .data_movement_analyzer import DataMovementAnalyzer
+from .data_movement_analyzer import DataMovementAnalyzer, Axes
 
 _logger = logging.getLogger(__name__)
 
@@ -14,12 +14,14 @@ _logger = logging.getLogger(__name__)
 class HabmotCriteriaHop:
     can_do_four_consecutive_jumps: bool = False
     non_hopping_leg_remains_behind: bool = False
+    arms_flex_and_swing_forward: bool = False
 
     def __str__(self) -> str:
         return f"""#####################
 Hop analysis results:
   Can do four consecutive jumps: {self.can_do_four_consecutive_jumps}
   Non-hopping leg remains behind: {self.non_hopping_leg_remains_behind}
+  Arms flex and swing forward: {self.arms_flex_and_swing_forward}
 #####################"""
 
 
@@ -56,6 +58,9 @@ class HopAnalyzer(DataMovementAnalyzer):
         is_success = self._compute_non_hopping_leg_remains_behind(prefered_ground_foot, jump_indices)
         self._criteria.non_hopping_leg_remains_behind = is_success
 
+        is_success = self._compute_arms_flex_and_swing_forward(jump_indices)
+        self._criteria.arms_flex_and_swing_forward = is_success
+
         # Print the results to the console
         _logger.info(f"\n{self._criteria}")
 
@@ -71,8 +76,9 @@ class HopAnalyzer(DataMovementAnalyzer):
         joint_centers = np.array([data.body_kinematics.joint_centers for data in self._data_centered])
         mid_jump_indices = [jump[1] for jump in jump_indices]
 
-        left_foot_height = joint_centers[:, self._habmoti.device.body_model.from_name("left_ankle"), 1]
-        right_foot_height = joint_centers[:, self._habmoti.device.body_model.from_name("right_ankle"), 1]
+        axis_index = Axes.VERTICAL.value
+        left_foot_height = joint_centers[:, self._habmoti.device.body_model.from_name("left_ankle"), axis_index]
+        right_foot_height = joint_centers[:, self._habmoti.device.body_model.from_name("right_ankle"), axis_index]
         prefered_ground_foot = (
             "left"
             if sum(left_foot_height[mid_jump_indices] < right_foot_height[mid_jump_indices]) > len(mid_jump_indices) / 2
@@ -87,8 +93,9 @@ class HopAnalyzer(DataMovementAnalyzer):
     ) -> None:
         joint_centers = np.array([data.body_kinematics.joint_centers for data in self._data_centered])
 
-        left_foot_height = joint_centers[:, self._habmoti.device.body_model.from_name("left_ankle"), 1]
-        right_foot_height = joint_centers[:, self._habmoti.device.body_model.from_name("right_ankle"), 1]
+        axis_index = Axes.VERTICAL.value
+        left_foot_height = joint_centers[:, self._habmoti.device.body_model.from_name("left_ankle"), axis_index]
+        right_foot_height = joint_centers[:, self._habmoti.device.body_model.from_name("right_ankle"), axis_index]
         mid_jump_indices = [jump[1] for jump in jump_indices]
 
         consecutive_jumps = 0
@@ -111,10 +118,11 @@ class HopAnalyzer(DataMovementAnalyzer):
     ) -> bool:
         joint_centers = np.array([data.body_kinematics.joint_centers for data in self._data_centered])
 
-        left_foot = joint_centers[:, self._habmoti.device.body_model.from_name("left_ankle"), 2]
-        left_leg = joint_centers[:, self._habmoti.device.body_model.from_name("left_knee"), 2]
-        right_foot = joint_centers[:, self._habmoti.device.body_model.from_name("right_ankle"), 2]
-        right_leg = joint_centers[:, self._habmoti.device.body_model.from_name("right_knee"), 2]
+        axis_index = Axes.FRONTAL.value
+        left_foot = joint_centers[:, self._habmoti.device.body_model.from_name("left_ankle"), axis_index]
+        left_leg = joint_centers[:, self._habmoti.device.body_model.from_name("left_knee"), axis_index]
+        right_foot = joint_centers[:, self._habmoti.device.body_model.from_name("right_ankle"), axis_index]
+        right_leg = joint_centers[:, self._habmoti.device.body_model.from_name("right_knee"), axis_index]
         mid_jump_indices = [jump[1] for jump in jump_indices]
 
         non_hopping_leg_remains_behind = True
@@ -127,15 +135,33 @@ class HopAnalyzer(DataMovementAnalyzer):
                 break
         return non_hopping_leg_remains_behind
 
+    def _compute_arms_flex_and_swing_forward(
+        self,
+        jump_indices: tuple[JumpIndices],
+    ) -> bool:
+        joint_centers = np.array([data.body_kinematics.joint_centers for data in self._data_centered])
+
+        index_of = lambda name: self._habmoti.device.body_model.from_name(name)
+
+        left_arm = joint_centers[:, [index_of("left_shoulder"), index_of("left_elbow"), index_of("left_wrist")], :]
+        right_arm = joint_centers[:, [index_of("right_shoulder"), index_of("right_elbow"), index_of("right_wrist")], :]
+
+        axis_index = Axes.FRONTAL.value
+        start_jump_indices = [jump[0] for jump in jump_indices]
+        mid_jump_indices = [jump[1] for jump in jump_indices]
+        left_elbow_forward = left_arm[start_jump_indices, 1, axis_index] < left_arm[mid_jump_indices, 1, axis_index]
+        right_elbow_forward = right_arm[start_jump_indices, 1, axis_index] < right_arm[mid_jump_indices, 1, axis_index]
+
     def _show_data(self, blocking: bool, jump_indices: tuple[JumpIndices]) -> None:
         from matplotlib import pyplot as plt
 
         t0 = self._data_centered[0].timestamp if self._data_centered else 0
         t = np.array([data.timestamp - t0 for data in self._data_centered]) / 1000.0
 
+        axis_index = Axes.VERTICAL.value
         joint_centers = np.array([data.body_kinematics.joint_centers for data in self._data_centered])
-        left_foot_height = joint_centers[:, self._habmoti.device.body_model.from_name("left_ankle"), 1]
-        right_foot_height = joint_centers[:, self._habmoti.device.body_model.from_name("right_ankle"), 1]
+        left_foot_height = joint_centers[:, self._habmoti.device.body_model.from_name("left_ankle"), axis_index]
+        right_foot_height = joint_centers[:, self._habmoti.device.body_model.from_name("right_ankle"), axis_index]
         mean_feet_height = (left_foot_height + right_foot_height) / 2
 
         mid_jump_indices = [jump[1] for jump in jump_indices]
