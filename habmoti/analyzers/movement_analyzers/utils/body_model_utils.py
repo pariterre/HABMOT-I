@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def segment_angle(arm_data: np.ndarray, pivot_index: int, p0_index: int, p1_index: int) -> bool:
+def joint_angle(arm_data: np.ndarray, pivot_index: int, p0_index: int, p1_index: int) -> bool:
     upper_arm = arm_data[:, p0_index, :] - arm_data[:, pivot_index, :]
     lower_arm = arm_data[:, p1_index, :] - arm_data[:, pivot_index, :]
     upper_arm_length = np.linalg.norm(upper_arm, axis=1)

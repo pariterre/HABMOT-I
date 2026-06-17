@@ -5,7 +5,7 @@ from typing import override
 import numpy as np
 import numpy.typing as npt
 
-from .utils.body_model_utils import segment_angle
+from .utils.body_model_utils import joint_angle
 from .utils.jump_utils import JumpIndices, compute_jump_indices
 from .data_movement_analyzer import DataMovementAnalyzer, Axes
 
@@ -153,9 +153,7 @@ class HopAnalyzer(DataMovementAnalyzer):
 
         left_arm = joint_centers[:, [index_of("left_shoulder"), index_of("left_elbow"), index_of("left_wrist")], :]
         right_arm = joint_centers[:, [index_of("right_shoulder"), index_of("right_elbow"), index_of("right_wrist")], :]
-        shoulder = 0
-        elbow = 1
-        wrist = 2
+        shoulder, elbow, wrist = 0, 1, 2
 
         def arm_is_moving_forward(arm_data: np.ndarray) -> npt.NDArray[np.bool_]:
             frontward = Axes.FRONTAL.value
@@ -163,7 +161,7 @@ class HopAnalyzer(DataMovementAnalyzer):
 
         def arm_is_flexed(arm_data: np.ndarray, instant: int) -> npt.NDArray[np.bool_]:
             threshold_angle = 10 * np.pi / 180  # 10 degrees in radians
-            angles = segment_angle(arm_data[instant, :, :], pivot_index=elbow, p0_index=shoulder, p1_index=wrist)
+            angles = joint_angle(arm_data[instant, :, :], pivot_index=elbow, p0_index=shoulder, p1_index=wrist)
             return (angles > np.pi / 2 - threshold_angle) & (angles < np.pi / 2 + threshold_angle)
 
         def arm_is_swinging_forward(arm_data: np.ndarray) -> npt.NDArray[np.bool_]:
