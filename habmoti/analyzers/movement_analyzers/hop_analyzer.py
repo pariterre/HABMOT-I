@@ -140,6 +140,7 @@ class HopAnalyzer(DataMovementAnalyzer):
 
         mid_jump_indices = [jump[1] for jump in jump_indices]
 
+        fig = plt.figure("Hop Analysis")
         plt.plot(t, left_foot_height, label="Left Foot Y")
         plt.plot(t, right_foot_height, label="Right Foot Y")
         plt.plot(t, mean_feet_height, label="Mean Feet Y", linestyle="--")
@@ -153,12 +154,16 @@ class HopAnalyzer(DataMovementAnalyzer):
 
         # Plot a vertical line a index to show where we are in the data
         line = plt.axvline(x=0, color="r", linestyle="--")
-        super()._show_data(blocking=blocking, t=t, line=line)
+        super()._show_data(blocking=blocking, fig=fig, t=t, line=line)
 
-    def _update_extra_show_data(self, index: int, t: np.ndarray, line) -> None:
+    def _update_extra_show_data(self, index: int, fig, t: np.ndarray, line) -> bool:
         from matplotlib import pyplot as plt
+
+        if not plt.fignum_exists(fig.number):
+            return False
 
         x = t[index]
         line.set_xdata([x, x])
 
         plt.pause((t[index] - t[index - 1]) if index > 0 else 1.0)
+        return True

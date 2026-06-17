@@ -243,6 +243,10 @@ class ToMatplotlibAnalyzer(DataViewerAnalyzer):
     def name(self) -> str:
         return "Matplotlib Viewer"
 
+    @property
+    def is_started(self) -> bool:
+        return self._is_started
+
     @override
     def initialize(self, habmoti: Habmoti) -> None:
         try:
@@ -276,17 +280,16 @@ class ToMatplotlibAnalyzer(DataViewerAnalyzer):
         if not self._is_started:
             return
 
-        if self._viewer_stop_event is not None and self._viewer_stop_event.is_set():
-            if not self._stop_notified and self._habmoti is not None:
+        viewer_stopped = self._viewer_stop_event is not None and self._viewer_stop_event.is_set()
+        viewer_process_is_alive = self._viewer_process is not None and self._viewer_process.is_alive()
+        if viewer_stopped or not viewer_process_is_alive:
+            if not self._stop_notified:
                 self._stop_notified = True
-                self._habmoti.terminate()
+                self._is_started = False
+                if self._habmoti is not None:
+                    self._habmoti.terminate()
             return
 
-        if self._viewer_process is not None and not self._viewer_process.is_alive():
-            if not self._stop_notified and self._habmoti is not None:
-                self._stop_notified = True
-                self._habmoti.terminate()
-            return
 
         if frame_data is None:
             return

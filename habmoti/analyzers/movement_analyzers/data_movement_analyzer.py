@@ -79,11 +79,11 @@ class DataMovementAnalyzer(Analyzer):
         from matplotlib import pyplot as plt
 
         viewer_global = ToMatplotlibAnalyzer(show_body_coordinate_systems=True)
-        viewer_global.initialize(self._habmoti)
+        viewer_global.initialize(habmoti=None)
         viewer_global.start_trial()
 
         viewer_local = ToMatplotlibAnalyzer(show_body_coordinate_systems=True)
-        viewer_local.initialize(self._habmoti)
+        viewer_local.initialize(habmoti=None)
         viewer_local.start_trial()
 
         t0 = self._data_centered[0].timestamp if self._data_centered else 0
@@ -91,17 +91,17 @@ class DataMovementAnalyzer(Analyzer):
         index = 0
         frames_in_global = self._data
         frames_in_local = self._data_centered
-        while self._habmoti.is_trial_started:
+        while self._update_extra_show_data(index, *args, **kwargs) or viewer_global.is_started or viewer_local.is_started:
             viewer_global.perform(frame_data=frames_in_global[index])
             viewer_local.perform(frame_data=frames_in_local[index])
-            self._update_extra_show_data(index, *args, **kwargs)
+            
             if blocking:
                 input(f"Showing frame {index}. Press Enter to continue to the next frame...")
             else:
                 plt.pause((t[index] - t[index - 1]) if index > 0 else 1.0)
             index = (index + 1) % len(frames_in_global)
 
-    def _update_extra_show_data(self, index: int, *args, **kwargs) -> None:
+    def _update_extra_show_data(self, index: int, *args, **kwargs) -> bool:
         """
         Update additional data visualization elements during the show data process.
         This method can be overridden by subclasses to provide custom behavior.
@@ -110,6 +110,8 @@ class DataMovementAnalyzer(Analyzer):
             index (int): The current frame index.
             *args: Additional positional arguments (passed from an overridden _show_data method).
             **kwargs: Additional keyword arguments (passed from an overridden _show_data method).
+        Returns:
+            bool: True if the show data process should continue, False to stop.
         """
 
         pass
