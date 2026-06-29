@@ -129,21 +129,31 @@ class SkipAnalyzer(DataMovementAnalyzer):
         joint_centers = np.array([data.body_kinematics.joint_centers for data in self._data_centered])
         left_mid_jump = [jump[1] for jump in left_skip_patterns]
         right_mid_jump = [jump[1] for jump in right_skip_patterns]
+        frontal_index = Axes.FRONTAL.value
 
-        index_of = lambda name: self._habmoti.device.body_model.from_name(name)
+        of = lambda name: self._habmoti.device.body_model.from_name(name)
 
-        left_arm = joint_centers[:, [index_of("left_shoulder"), index_of("left_elbow"), index_of("left_wrist")], :]
-        right_arm = joint_centers[:, [index_of("right_shoulder"), index_of("right_elbow"), index_of("right_wrist")], :]
-        shoulder, elbow, wrist = 0, 1, 2
+        left = joint_centers[:, [of("left_shoulder"), of("left_elbow"), of("left_wrist"), of("left_ankle")], :]
+        right = joint_centers[:, [of("right_shoulder"), of("right_elbow"), of("right_wrist"), of("right_ankle")], :]
+        shoulder, elbow, wrist, ankle = 0, 1, 2, 3
 
-        def arm_is_flexed(arm_data: np.ndarray, instant: int) -> npt.NDArray[np.bool_]:
+        def arm_is_flexed(data: np.ndarray, instant: int) -> npt.NDArray[np.bool_]:
             target = 90 * np.pi / 180  # 90 degrees
             tolerance = 10 * np.pi / 180  # 10 degrees
-            angles = joint_angle(arm_data[instant, :, :], pivot_index=elbow, p0_index=shoulder, p1_index=wrist)
+            angles = joint_angle(data[instant, :, :], pivot_index=elbow, p0_index=shoulder, p1_index=wrist)
             return (angles > target - tolerance) & (angles < target + tolerance)
 
-        left_arm_is_success = arm_is_flexed(left_arm, left_mid_jump)
-        right_arm_is_success = arm_is_flexed(right_arm, right_mid_jump)
+        def arm_is_opposite_to_leg(data: np.ndarray, instant: int) -> npt.NDArray[np.bool_]:
+            # The arm is opposite to the leg if the arm is flexed and the leg is extended (not flexed)
+            hand_position = data[instant, wrist, frontal_index]
+            foot_position = data[instant, ankle, frontal_index]
+            return hand_position * foot_position < 0  # Same side of the body should be opposite signs
+
+        def arm_is_success(data: np.ndarray, instant: int) -> npt.NDArray[np.bool_]:
+            return arm_is_flexed(data, instant) & arm_is_opposite_to_leg(data, instant)
+
+        left_arm_is_success = arm_is_success(left, left_mid_jump)
+        right_arm_is_success = arm_is_success(right, right_mid_jump)
         arms_are_success = left_arm_is_success & right_arm_is_success
 
         return sum(arms_are_success) == (len(left_skip_patterns) + len(right_skip_patterns))

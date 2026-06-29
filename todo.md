@@ -18,6 +18,9 @@ Answer to the following questions:
         - 1. What "pendular fashion" actually means?
         - 2. What is the anchor point to determine whether the leg is behind?
         - 3. What is the "forward" movement implies (currently comparing start- to mid-jump)?
+    - 4. Skip
+        - 1. Finding the step actually means that a step forward and a hop are performed...
+        - 1. How should we score this then?
     - 5 Horizontal Jump
         - 1. What means "flexed"?
         - 1. What is "back" (currently the neck)?
