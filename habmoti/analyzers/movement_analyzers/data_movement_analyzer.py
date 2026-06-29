@@ -75,14 +75,6 @@ class DataMovementAnalyzer(Analyzer):
         The criteria is a dataclass that contains the results of the analysis.
         """
 
-    @property
-    def analyzed_data(self) -> dict:
-        """
-        Return the analyzed data as a dictionary.
-        The keys of the dictionary are the names of the analyzed data, and the values are the analyzed data.
-        """
-        return self.criteria.to_dict() if self.criteria is not None else {}
-
     @override
     def initialize(self, habmoti: Habmoti) -> None:
         _logger.info(f"Initializing {self.name}")

@@ -1,4 +1,8 @@
+from pathlib import Path
+from typing import Generator
+
 from ..analyzers.analyzer import Analyzer, AnalyzerList
+from ..analyzers.movement_analyzers.data_movement_analyzer import DataMovementAnalyzer
 from ..analyzers.movement_analyzers.gallop_analyzer import GallopAnalyzer
 from ..analyzers.movement_analyzers.hop_analyzer import HopAnalyzer
 from ..analyzers.movement_analyzers.horizontal_jump_analyzer import HorizontalJumpAnalyzer
@@ -32,6 +36,35 @@ _analyzer_factories = {
     "skip": SkipAnalyzer,
     "slide": SlideAnalyzer,
 }
+
+
+def csv_read_multiple_files(files: list[Path], analyzers: list[str]) -> Generator[DataMovementAnalyzer, None, None]:
+    if len(analyzers) == 1:
+        analyzers = analyzers * len(files)
+    if len(files) != len(analyzers):
+        raise ValueError(
+            f"Number of files ({len(files)}) and analyzers ({len(analyzers)}) must be the same or there must be only one analyzer."
+        )
+
+    habmoti = Habmoti()
+
+    for file, analyzer_name in zip(files, analyzers):
+        device = CsvReaderDevice(filepath=file)
+        factory = _analyzer_factories[analyzer_name]
+        if not issubclass(factory, DataMovementAnalyzer):
+            raise ValueError(f"Analyzer {analyzer_name} is not a subclass of DataMovementAnalyzer")
+        analyzer = factory()
+
+        habmoti.analyzer = None
+        habmoti.device = device
+        habmoti.analyzer = analyzer
+        habmoti.initialize()
+        habmoti.wait_for_trial_to_end()
+
+        yield analyzer
+
+        habmoti.terminate()
+        habmoti.wait_for_termination()
 
 
 def habmoti_from_dict(habmoti: Habmoti | None, config: dict) -> Habmoti:

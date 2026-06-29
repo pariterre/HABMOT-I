@@ -257,3 +257,19 @@ The parameters for the `slide` analyzer are as follows:
 }
 ```
 where `<true_or_false>` is a boolean that indicates whether to show the debug graphs in the Matplotlib window.
+
+## Running the batch process files
+
+When analyzing the data, it can be tricky to extract all the data from the CSV files and properly call the analyzers. To facilitate this, a batch process can be run to analyze multiple files with multiple analyzers.
+
+The file file `runner/main_batch.py` is an example of how to call the `csv_read_multiple_files` generator to extract data from multiple CSV and perform data reduction on them. The file itself should not be used directly, but rather copied and modified to fit the user's needs.
+
+As it stands now, the script expect two environment variables to be set:
+- `FILES_TO_PROCESS`: A list of paths to the CSV files to process. The list must be a string representation of a list of strings, e.g. `["results/run.csv", "results/hop.csv"]`.
+- `ANALYZER_TO_USE`: A list of analyzers to use for each file. The list must be a string representation of a list of strings of equal size of `FILES_TO_PROCESS` (for convenience, if all analyses are the same, only one analyzer can be provided). The analyzers must be one of the following values:
+    - `gallop`
+    - `hop`
+    - `horizontal_jump`
+    - `run`
+    - `skip`
+    - `slide`
