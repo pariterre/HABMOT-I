@@ -14,7 +14,7 @@ def main():
 
     for analyzer in csv_read_multiple_files(files=files, analyzers=analyzers):
         # Do whatever analyses you want with the analyzer object here
-        print(f"Analyzer: {analyzer.criteria.to_dict() if analyzer.criteria is not None else 'No criteria available'}")
+        print(f"{analyzer.criteria if analyzer.criteria is not None else 'No criteria available'}")
 
         # # Here are the relevent properties of the analyzer object that you can use:
         # analyzer.data  # Access the data as collected by the device

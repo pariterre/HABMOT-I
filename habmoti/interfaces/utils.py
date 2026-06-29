@@ -49,19 +49,16 @@ def csv_read_multiple_files(files: list[Path], analyzers: list[str]) -> Generato
     habmoti = Habmoti()
 
     for file, analyzer_name in zip(files, analyzers):
-        device = CsvReaderDevice(filepath=file)
-        factory = _analyzer_factories[analyzer_name]
-        if not issubclass(factory, DataMovementAnalyzer):
+        if not issubclass(_analyzer_factories[analyzer_name], DataMovementAnalyzer):
             raise ValueError(f"Analyzer {analyzer_name} is not a subclass of DataMovementAnalyzer")
-        analyzer = factory()
 
         habmoti.analyzer = None
-        habmoti.device = device
-        habmoti.analyzer = analyzer
+        habmoti.device = CsvReaderDevice(filepath=file)
+        habmoti.analyzer = _analyzer_factories[analyzer_name]()
         habmoti.initialize()
         habmoti.wait_for_trial_to_end()
 
-        yield analyzer
+        yield habmoti.analyzer
 
         habmoti.terminate()
         habmoti.wait_for_termination()
