@@ -1,3 +1,4 @@
+from abc import abstractmethod, ABC
 from enum import Enum
 import logging
 from typing import TYPE_CHECKING, override
@@ -39,6 +40,15 @@ class Axes(Enum):
             return np.array([0.0, 0.0, 1.0])
 
 
+class HabmotCriteria(ABC):
+    @abstractmethod
+    def to_dict(self) -> dict:
+        """
+        Return the criteria as a dictionary.
+        The keys of the dictionary are the names of the criteria, and the values are the criteria.
+        """
+
+
 class DataMovementAnalyzer(Analyzer):
     def __init__(self):
         super().__init__()
@@ -48,6 +58,30 @@ class DataMovementAnalyzer(Analyzer):
         self._are_data_initialized = False
         self._data: list[FrameData] | None = None
         self._data_centered: list[FrameData] | None = None
+
+    @property
+    def data(self) -> list[FrameData] | None:
+        return self._data
+
+    @property
+    def data_centered(self) -> list[FrameData] | None:
+        return self._data_centered
+
+    @property
+    @abstractmethod
+    def criteria(self) -> HabmotCriteria | None:
+        """
+        Return the criteria of the analyzer.
+        The criteria is a dataclass that contains the results of the analysis.
+        """
+
+    @property
+    def analyzed_data(self) -> dict:
+        """
+        Return the analyzed data as a dictionary.
+        The keys of the dictionary are the names of the analyzed data, and the values are the analyzed data.
+        """
+        return self.criteria.to_dict() if self.criteria is not None else {}
 
     @override
     def initialize(self, habmoti: Habmoti) -> None:
@@ -101,7 +135,7 @@ class DataMovementAnalyzer(Analyzer):
         self._data = None
         self._data_centered = None
 
-    def _show_data(self, *args, blocking: bool = False, **kwargs) -> None:
+    def show_data(self, *args, blocking: bool = False, **kwargs) -> None:
         from matplotlib import pyplot as plt
 
         viewer_global = ToMatplotlibAnalyzer(show_body_coordinate_systems=True)
@@ -136,8 +170,8 @@ class DataMovementAnalyzer(Analyzer):
 
         Args:
             index (int): The current frame index.
-            *args: Additional positional arguments (passed from an overridden _show_data method).
-            **kwargs: Additional keyword arguments (passed from an overridden _show_data method).
+            *args: Additional positional arguments (passed from an overridden show_data method).
+            **kwargs: Additional keyword arguments (passed from an overridden show_data method).
         Returns:
             bool: True if the show data process should continue, False to stop.
         """

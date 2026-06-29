@@ -7,13 +7,13 @@ import numpy.typing as npt
 
 from .utils.body_model_utils import joint_angle
 from .utils.jump_utils import JumpIndices, compute_jump_indices
-from .data_movement_analyzer import DataMovementAnalyzer, Axes
+from .data_movement_analyzer import DataMovementAnalyzer, Axes, HabmotCriteria
 
 _logger = logging.getLogger(__name__)
 
 
 @dataclass
-class HabmotCriteriaRun:
+class HabmotCriteriaRun(HabmotCriteria):
     are_arms_legs_opposition: bool = False
     is_jumping: bool = False
     non_support_leg_is_flexed: bool = False
@@ -27,6 +27,13 @@ Run analysis results:
   4. Non-support leg is flexed: {self.non_support_leg_is_flexed}
 #####################"""
 
+    def to_dict(self) -> dict:
+        return {
+            "are_arms_legs_opposition": self.are_arms_legs_opposition,
+            "is_jumping": self.is_jumping,
+            "non_support_leg_is_flexed": self.non_support_leg_is_flexed,
+        }
+
 
 class RunAnalyzer(DataMovementAnalyzer):
     def __init__(self, show_debug_graphs: bool = False) -> None:
@@ -38,6 +45,11 @@ class RunAnalyzer(DataMovementAnalyzer):
     @override
     def name(self) -> str:
         return "Run"
+
+    @property
+    @override
+    def criteria(self) -> HabmotCriteria | None:
+        return self._criteria
 
     @override
     def start_trial(self) -> None:
@@ -70,7 +82,7 @@ class RunAnalyzer(DataMovementAnalyzer):
         _logger.info(f"\n{self._criteria}")
 
         if self._show_debug_graphs:
-            self._show_data(blocking=False, jump_indices=jump_indices)
+            self.show_data(blocking=False, jump_indices=jump_indices)
 
     @override
     def dispose(self) -> None:
@@ -136,8 +148,14 @@ class RunAnalyzer(DataMovementAnalyzer):
 
         return left_leg_is_flexed.all() and right_leg_is_flexed.all()
 
-    def _show_data(self, blocking: bool, jump_indices: tuple[JumpIndices]) -> None:
+    @override
+    def show_data(self, blocking: bool = False, jump_indices: tuple[JumpIndices] = None) -> None:
         from matplotlib import pyplot as plt
+
+        if jump_indices is None:
+            jump_indices = compute_jump_indices(
+                body_model=self._habmoti.device.body_model, frames=self._data_centered, threshold=0.05
+            )
 
         t0 = self._data_centered[0].timestamp if self._data_centered else 0
         t = np.array([data.timestamp - t0 for data in self._data_centered]) / 1000.0
@@ -164,8 +182,9 @@ class RunAnalyzer(DataMovementAnalyzer):
 
         # Plot a vertical line a index to show where we are in the data
         line = plt.axvline(x=0, color="r", linestyle="--")
-        super()._show_data(blocking=blocking, fig=fig, t=t, line=line)
+        super().show_data(blocking=blocking, fig=fig, t=t, line=line)
 
+    @override
     def _update_extra_show_data(self, index: int, fig, t: np.ndarray, line) -> bool:
         from matplotlib import pyplot as plt
 

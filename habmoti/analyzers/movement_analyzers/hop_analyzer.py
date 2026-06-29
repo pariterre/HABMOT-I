@@ -7,13 +7,13 @@ import numpy.typing as npt
 
 from .utils.body_model_utils import joint_angle
 from .utils.jump_utils import JumpIndices, compute_jump_indices
-from .data_movement_analyzer import DataMovementAnalyzer, Axes
+from .data_movement_analyzer import DataMovementAnalyzer, Axes, HabmotCriteria
 
 _logger = logging.getLogger(__name__)
 
 
 @dataclass
-class HabmotCriteriaHop:
+class HabmotCriteriaHop(HabmotCriteria):
     non_hopping_leg_swings_forward_in_pendular_fashion: bool = False
     non_hopping_leg_remains_behind: bool = False
     arms_flex_and_swing_forward: bool = False
@@ -28,6 +28,14 @@ Hop analysis results:
   4. Can do four consecutive jumps: {self.can_do_four_consecutive_jumps}
 #####################"""
 
+    def to_dict(self) -> dict:
+        return {
+            "non_hopping_leg_swings_forward_in_pendular_fashion": self.non_hopping_leg_swings_forward_in_pendular_fashion,
+            "non_hopping_leg_remains_behind": self.non_hopping_leg_remains_behind,
+            "arms_flex_and_swing_forward": self.arms_flex_and_swing_forward,
+            "can_do_four_consecutive_jumps": self.can_do_four_consecutive_jumps,
+        }
+
 
 class HopAnalyzer(DataMovementAnalyzer):
     def __init__(self, show_debug_graphs: bool = False) -> None:
@@ -39,6 +47,11 @@ class HopAnalyzer(DataMovementAnalyzer):
     @override
     def name(self) -> str:
         return "Hop"
+
+    @property
+    @override
+    def criteria(self) -> HabmotCriteria | None:
+        return self._criteria
 
     @override
     def start_trial(self) -> None:
@@ -75,7 +88,7 @@ class HopAnalyzer(DataMovementAnalyzer):
         _logger.info(f"\n{self._criteria}")
 
         if self._show_debug_graphs:
-            self._show_data(blocking=False, jump_indices=jump_indices)
+            self.show_data(blocking=False, jump_indices=jump_indices)
 
     @override
     def dispose(self) -> None:
@@ -201,8 +214,14 @@ class HopAnalyzer(DataMovementAnalyzer):
         best_consecutive_jumps_so_far = max(best_consecutive_jumps_so_far, consecutive_jumps)
         return best_consecutive_jumps_so_far
 
-    def _show_data(self, blocking: bool, jump_indices: tuple[JumpIndices]) -> None:
+    @override
+    def show_data(self, blocking: bool = False, jump_indices: tuple[JumpIndices] = None) -> None:
         from matplotlib import pyplot as plt
+
+        if jump_indices is None:
+            jump_indices = compute_jump_indices(
+                body_model=self._habmoti.device.body_model, frames=self._data_centered, threshold=0.1
+            )
 
         t0 = self._data_centered[0].timestamp if self._data_centered else 0
         t = np.array([data.timestamp - t0 for data in self._data_centered]) / 1000.0
@@ -229,8 +248,9 @@ class HopAnalyzer(DataMovementAnalyzer):
 
         # Plot a vertical line a index to show where we are in the data
         line = plt.axvline(x=0, color="r", linestyle="--")
-        super()._show_data(blocking=blocking, fig=fig, t=t, line=line)
+        super().show_data(blocking=blocking, fig=fig, t=t, line=line)
 
+    @override
     def _update_extra_show_data(self, index: int, fig, t: np.ndarray, line) -> bool:
         from matplotlib import pyplot as plt
 

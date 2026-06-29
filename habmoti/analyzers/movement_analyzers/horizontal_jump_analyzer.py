@@ -5,7 +5,7 @@ from typing import override
 import numpy as np
 import numpy.typing as npt
 
-from .data_movement_analyzer import Axes, DataMovementAnalyzer
+from .data_movement_analyzer import Axes, DataMovementAnalyzer, HabmotCriteria
 from .utils.body_model_utils import joint_angle
 from .utils.jump_utils import JumpIndices, compute_jump_indices
 
@@ -13,7 +13,7 @@ _logger = logging.getLogger(__name__)
 
 
 @dataclass
-class HabmotCriteriaHorizontalJump:
+class HabmotCriteriaHorizontalJump(HabmotCriteria):
     knees_are_flexed_and_arms_are_back_prior_to_takeoff: bool = False
     hands_are_extended_and_above_head: bool = False
     feet_are_together: bool = False
@@ -28,6 +28,14 @@ Horizontal jump analysis results:
   4. Hands are forced downward at landing: {self.hands_are_forced_downward_at_landing}
 #####################"""
 
+    def to_dict(self) -> dict:
+        return {
+            "knees_are_flexed_and_arms_are_back_prior_to_takeoff": self.knees_are_flexed_and_arms_are_back_prior_to_takeoff,
+            "hands_are_extended_and_above_head": self.hands_are_extended_and_above_head,
+            "feet_are_together": self.feet_are_together,
+            "hands_are_forced_downward_at_landing": self.hands_are_forced_downward_at_landing,
+        }
+
 
 class HorizontalJumpAnalyzer(DataMovementAnalyzer):
     def __init__(self, show_debug_graphs: bool = False) -> None:
@@ -39,6 +47,11 @@ class HorizontalJumpAnalyzer(DataMovementAnalyzer):
     @override
     def name(self) -> str:
         return "Horizontal jump"
+
+    @property
+    @override
+    def criteria(self) -> HabmotCriteria | None:
+        return self._criteria
 
     @override
     def start_trial(self) -> None:
@@ -74,7 +87,7 @@ class HorizontalJumpAnalyzer(DataMovementAnalyzer):
         _logger.info(f"\n{self._criteria}")
 
         if self._show_debug_graphs:
-            self._show_data(blocking=False, jump_indices=jump_indices)
+            self.show_data(blocking=False, jump_indices=jump_indices)
 
     @override
     def dispose(self) -> None:
@@ -177,8 +190,14 @@ class HorizontalJumpAnalyzer(DataMovementAnalyzer):
         hands_height_are_forced_downward = hands_velocity[end, :] < 0
         return hands_height_are_forced_downward.all()
 
-    def _show_data(self, blocking: bool, jump_indices: tuple[JumpIndices]) -> None:
+    @override
+    def show_data(self, blocking: bool = False, jump_indices: tuple[JumpIndices] = None) -> None:
         from matplotlib import pyplot as plt
+
+        if jump_indices is None:
+            jump_indices = compute_jump_indices(
+                body_model=self._habmoti.device.body_model, frames=self._data_centered, threshold=0.1
+            )
 
         t0 = self._data_centered[0].timestamp if self._data_centered else 0
         t = np.array([data.timestamp - t0 for data in self._data_centered]) / 1000.0
@@ -205,8 +224,9 @@ class HorizontalJumpAnalyzer(DataMovementAnalyzer):
 
         # Plot a vertical line a index to show where we are in the data
         line = plt.axvline(x=0, color="r", linestyle="--")
-        super()._show_data(blocking=blocking, fig=fig, t=t, line=line)
+        super().show_data(blocking=blocking, fig=fig, t=t, line=line)
 
+    @override
     def _update_extra_show_data(self, index: int, fig, t: np.ndarray, line) -> bool:
         from matplotlib import pyplot as plt
 

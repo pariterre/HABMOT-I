@@ -26,6 +26,8 @@ class Habmoti:
         self._analyzer_ready_event = threading.Event()
         self._capture_has_ended_event = threading.Event()
         self._stop_request_event = threading.Event()
+        self._trial_has_stopped_event = threading.Event()
+        self._has_terminated_event = threading.Event()
 
         self._to_analyzer_queue = queue.Queue()
 
@@ -52,6 +54,8 @@ class Habmoti:
         self._analyzer_ready_event.clear()
         self._capture_has_ended_event.clear()
         self._stop_request_event.clear()
+        self._trial_has_stopped_event.clear()
+        self._has_terminated_event.clear()
 
         self._threads = [
             threading.Thread(target=self._run_capture_loop, daemon=False),
@@ -62,6 +66,12 @@ class Habmoti:
 
         self._analyzer_ready_event.wait()
         self._is_initialized = True
+
+    def wait_for_termination(self) -> None:
+        """
+        Wait for the pipeline to terminate. This method blocks until the pipeline is terminated.
+        """
+        self._has_terminated_event.wait()
 
     def exec(self) -> None:
         """
@@ -79,6 +89,13 @@ class Habmoti:
         """
         self._analyzer.start_trial()
         self._is_trial_started = True
+        self._trial_has_stopped_event.clear()
+
+    def wait_for_trial_to_end(self):
+        """
+        Wait for the trial to end. This method blocks until the trial is ended.
+        """
+        self._trial_has_stopped_event.wait()
 
     def stop_trial(self):
         """
@@ -86,6 +103,7 @@ class Habmoti:
         """
         self._analyzer.stop_trial()
         self._is_trial_started = False
+        self._trial_has_stopped_event.set()
 
     def terminate(self) -> None:
         """
@@ -153,6 +171,9 @@ class Habmoti:
         except Exception as e:
             _logger.error("Failed to stop device:", exc_info=e)
 
+        self._is_initialized = False
+        self._has_terminated_event.set()
+
     def _wait_for_analyzer(self) -> None:
         """
         Wait for the analyzer to be ready
@@ -183,7 +204,6 @@ class Habmoti:
 
         # Wait until the analyzer queue is empty before setting started to False
         self._to_analyzer_queue.join()
-        self._is_initialized = False
 
     @property
     def _has_analyzer(self) -> bool:

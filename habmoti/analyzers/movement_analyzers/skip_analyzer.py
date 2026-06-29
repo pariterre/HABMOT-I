@@ -7,13 +7,13 @@ import numpy.typing as npt
 
 from .utils.body_model_utils import joint_angle
 from .utils.jump_utils import JumpIndices, compute_jump_indices
-from .data_movement_analyzer import DataMovementAnalyzer, Axes
+from .data_movement_analyzer import DataMovementAnalyzer, Axes, HabmotCriteria
 
 _logger = logging.getLogger(__name__)
 
 
 @dataclass
-class HabmotCriteriaSkip:
+class HabmotCriteriaSkip(HabmotCriteria):
     arms_are_flexed_and_opposite_to_legs: bool = False
     can_do_four_consecutive_skips: bool = False
 
@@ -24,6 +24,12 @@ Skip analysis results:
   2. Arms are flexed and move in opposition to the legs to produce force: {self.arms_are_flexed_and_opposite_to_legs}
   3. Completes four continuous rhythmical alternating skips: {self.can_do_four_consecutive_skips}
 #####################"""
+
+    def to_dict(self) -> dict:
+        return {
+            "arms_are_flexed_and_opposite_to_legs": self.arms_are_flexed_and_opposite_to_legs,
+            "can_do_four_consecutive_skips": self.can_do_four_consecutive_skips,
+        }
 
 
 class SkipAnalyzer(DataMovementAnalyzer):
@@ -36,6 +42,11 @@ class SkipAnalyzer(DataMovementAnalyzer):
     @override
     def name(self) -> str:
         return "Skip"
+
+    @property
+    @override
+    def criteria(self) -> HabmotCriteria | None:
+        return self._criteria
 
     @override
     def start_trial(self) -> None:
@@ -66,9 +77,7 @@ class SkipAnalyzer(DataMovementAnalyzer):
         _logger.info(f"\n{self._criteria}")
 
         if self._show_debug_graphs:
-            self._show_data(
-                blocking=False, left_skip_patterns=left_skip_patterns, right_skip_patterns=right_skip_patterns
-            )
+            self.show_data(blocking=False, skip_patterns=(left_skip_patterns, right_skip_patterns))
 
     @override
     def dispose(self) -> None:
@@ -188,10 +197,19 @@ class SkipAnalyzer(DataMovementAnalyzer):
 
         return best_consecutive_count >= 4
 
-    def _show_data(
-        self, blocking: bool, left_skip_patterns: list[JumpIndices], right_skip_patterns: list[JumpIndices]
+    @override
+    def show_data(
+        self, blocking: bool = False, skip_patterns: tuple[list[JumpIndices], list[JumpIndices]] = None
     ) -> None:
         from matplotlib import pyplot as plt
+
+        if skip_patterns is None:
+            jump_indices = compute_jump_indices(
+                body_model=self._habmoti.device.body_model, frames=self._data_centered, threshold=0.1
+            )
+            left_skip_patterns, right_skip_patterns = self._detect_skip_patterns(jump_indices)
+        else:
+            left_skip_patterns, right_skip_patterns = skip_patterns
 
         t0 = self._data_centered[0].timestamp if self._data_centered else 0
         t = np.array([data.timestamp - t0 for data in self._data_centered]) / 1000.0
@@ -220,8 +238,9 @@ class SkipAnalyzer(DataMovementAnalyzer):
 
         # Plot a vertical line a index to show where we are in the data
         line = plt.axvline(x=0, color="r", linestyle="--")
-        super()._show_data(blocking=blocking, fig=fig, t=t, line=line)
+        super().show_data(blocking=blocking, fig=fig, t=t, line=line)
 
+    @override
     def _update_extra_show_data(self, index: int, fig, t: np.ndarray, line) -> bool:
         from matplotlib import pyplot as plt
 

@@ -3,17 +3,15 @@ import logging
 from typing import override
 
 import numpy as np
-import numpy.typing as npt
 
-from .utils.body_model_utils import joint_angle
 from .utils.jump_utils import JumpIndices, compute_jump_indices
-from .data_movement_analyzer import DataMovementAnalyzer, Axes
+from .data_movement_analyzer import DataMovementAnalyzer, Axes, HabmotCriteria
 
 _logger = logging.getLogger(__name__)
 
 
 @dataclass
-class HabmotCriteriaSlide:
+class HabmotCriteriaSlide(HabmotCriteria):
     leading_foot_is_off_ground: bool = False
     four_slides_on_preferred_foot: bool = False
     four_slides_on_non_preferred_foot: bool = False
@@ -27,6 +25,13 @@ Slide analysis results:
   4. Four slides on non-preferred foot: {self.four_slides_on_non_preferred_foot}
 #####################"""
 
+    def to_dict(self) -> dict:
+        return {
+            "leading_foot_is_off_ground": self.leading_foot_is_off_ground,
+            "four_slides_on_preferred_foot": self.four_slides_on_preferred_foot,
+            "four_slides_on_non_preferred_foot": self.four_slides_on_non_preferred_foot,
+        }
+
 
 class SlideAnalyzer(DataMovementAnalyzer):
     def __init__(self, show_debug_graphs: bool = False) -> None:
@@ -38,6 +43,11 @@ class SlideAnalyzer(DataMovementAnalyzer):
     @override
     def name(self) -> str:
         return "Slide"
+
+    @property
+    @override
+    def criteria(self) -> HabmotCriteria | None:
+        return self._criteria
 
     @override
     def start_trial(self) -> None:
@@ -73,7 +83,7 @@ class SlideAnalyzer(DataMovementAnalyzer):
         _logger.info(f"\n{self._criteria}")
 
         if self._show_debug_graphs:
-            self._show_data(blocking=False, jump_indices=jump_indices)
+            self.show_data(blocking=False, jump_indices=jump_indices)
 
     @override
     def dispose(self) -> None:
@@ -132,8 +142,14 @@ class SlideAnalyzer(DataMovementAnalyzer):
                 return True
         return False
 
-    def _show_data(self, blocking: bool, jump_indices: tuple[JumpIndices]) -> None:
+    @override
+    def show_data(self, blocking: bool = False, jump_indices: tuple[JumpIndices] = None) -> None:
         from matplotlib import pyplot as plt
+
+        if jump_indices is None:
+            jump_indices = compute_jump_indices(
+                body_model=self._habmoti.device.body_model, frames=self._data_centered, threshold=0.05
+            )
 
         t0 = self._data_centered[0].timestamp if self._data_centered else 0
         t = np.array([data.timestamp - t0 for data in self._data_centered]) / 1000.0
@@ -160,8 +176,9 @@ class SlideAnalyzer(DataMovementAnalyzer):
 
         # Plot a vertical line a index to show where we are in the data
         line = plt.axvline(x=0, color="r", linestyle="--")
-        super()._show_data(blocking=blocking, fig=fig, t=t, line=line)
+        super().show_data(blocking=blocking, fig=fig, t=t, line=line)
 
+    @override
     def _update_extra_show_data(self, index: int, fig, t: np.ndarray, line) -> bool:
         from matplotlib import pyplot as plt
 
